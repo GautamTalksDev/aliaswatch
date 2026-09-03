@@ -36,11 +36,11 @@ OLLAMA_BASE = "http://localhost:11434/v1"
 
 LOCAL_MODELS = [
     ModelSpec("qwen3-8b", "Qwen3 8B (local)", "openai_compat", "qwen3:8b",
-              base_url=OLLAMA_BASE, env_key="OLLAMA_UNUSED"),
+              base_url=OLLAMA_BASE, env_key="OLLAMA_UNUSED", local=True),
     ModelSpec("gemma3-4b", "Gemma 3 4B (local)", "openai_compat", "gemma3:4b",
-              base_url=OLLAMA_BASE, env_key="OLLAMA_UNUSED"),
+              base_url=OLLAMA_BASE, env_key="OLLAMA_UNUSED", local=True),
     ModelSpec("llama32-3b", "Llama 3.2 3B (local)", "openai_compat", "llama3.2:3b",
-              base_url=OLLAMA_BASE, env_key="OLLAMA_UNUSED"),
+              base_url=OLLAMA_BASE, env_key="OLLAMA_UNUSED", local=True),
 ]
 
 # Free hosted tiers. Still need a key, but no card. Listed so the choice is
@@ -70,8 +70,8 @@ harness does not care which providers are present.
 # ---------------------------------------------------------------------------
 
 MOCK_MODELS = [
-    ModelSpec("mock-a", "Mock Model A", "mock", "mock-a-v1", env_key="MOCK"),
-    ModelSpec("mock-b", "Mock Model B", "mock", "mock-b-v1", env_key="MOCK"),
+    ModelSpec("mock-a", "Mock Model A", "mock", "mock-a-v1", env_key="MOCK", local=True),
+    ModelSpec("mock-b", "Mock Model B", "mock", "mock-b-v1", env_key="MOCK", local=True),
 ]
 
 # Roughly the failure rates a competent model shows on this battery, so the

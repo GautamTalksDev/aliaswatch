@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -24,8 +25,15 @@ RESULTS = ROOT / "results"
 # A public log whose days were generated locally is worthless, so this is a
 # different directory rather than a flag on the same one.
 RESULTS_LOCAL = ROOT / "results-local"
-MAX_RETRIES = 4
+MAX_RETRIES = 6
 RETRY_BASE = 2.0
+
+# Free tiers rate-limit hard. Without pacing, a 166-item battery trips the
+# limit partway through and the day is recorded as a gap - which is honest but
+# useless. Each spec carries its own requests-per-minute budget and the runner
+# spaces calls to stay under it. A run that takes twenty minutes and completes
+# is worth more than one that takes two and leaves a hole in the record.
+DEFAULT_RPM = 30
 
 
 @dataclass
@@ -37,15 +45,59 @@ class ModelSpec:
     base_url: str | None = None
     env_key: str = ""
     supports_tools: bool = True
+    rpm: int = DEFAULT_RPM      # requests per minute this provider tolerates
+    note: str = ""              # why this alias is in the index
+    # Whether results are local-only. Explicit rather than inferred from the
+    # provider string: "openai_compat" covers both Ollama on localhost and
+    # hosted services like Groq, and guessing wrong would either leak local
+    # data into the record or refuse to sign a real measurement.
+    local: bool = False
 
+
+# ---------------------------------------------------------------------------
+# The index.
+#
+# Two kinds of entry, and the distinction is the whole point:
+#
+#   FLOATING aliases ("*-latest", or a bare product name) are names the
+#   provider repoints at will. These are the real subjects - what a user gets
+#   when they type that name is not fixed, and nobody publishes when it moves.
+#
+#   PINNED versions are the control. A pinned name should not move. If it
+#   does, that is a much stronger finding than a floating alias moving, and
+#   having both in the index is what lets the record tell them apart.
+#
+# Every entry below is reachable on a free tier. Paid ones are listed further
+# down, commented out, so adding them later is one edit rather than research.
+# ---------------------------------------------------------------------------
 
 MODELS = [
-    ModelSpec("claude-sonnet", "Claude Sonnet", "anthropic", "claude-sonnet-4-6",
-              env_key="ANTHROPIC_API_KEY"),
-    ModelSpec("gpt", "GPT (current default)", "openai", "gpt-5.1",
-              env_key="OPENAI_API_KEY"),
-    ModelSpec("gemini", "Gemini Pro", "google", "gemini-2.5-pro",
-              env_key="GEMINI_API_KEY"),
+    # --- Google, free tier at aistudio.google.com/apikey -------------------
+    ModelSpec("gemini-flash-latest", "Gemini Flash (latest)", "google",
+              "gemini-flash-latest", env_key="GEMINI_API_KEY", rpm=10,
+              note="floating alias - repointed by Google without announcement"),
+    ModelSpec("gemini-2.5-flash", "Gemini 2.5 Flash", "google",
+              "gemini-2.5-flash", env_key="GEMINI_API_KEY", rpm=10,
+              note="pinned version - the control for the alias above"),
+
+    # --- Groq, free tier at console.groq.com/keys --------------------------
+    ModelSpec("groq-gpt-oss-120b", "GPT-OSS 120B (Groq)", "openai_compat",
+              "openai/gpt-oss-120b", base_url="https://api.groq.com/openai/v1",
+              env_key="GROQ_API_KEY", rpm=25,
+              note="open weights - paired with the Cerebras entry below"),
+    ModelSpec("groq-gpt-oss-20b", "GPT-OSS 20B (Groq)", "openai_compat",
+              "openai/gpt-oss-20b", base_url="https://api.groq.com/openai/v1",
+              env_key="GROQ_API_KEY", rpm=25),
+    ModelSpec("groq-qwen3-27b", "Qwen3.8 27B (Groq)", "openai_compat",
+              "qwen/qwen3.8-27b", base_url="https://api.groq.com/openai/v1",
+              env_key="GROQ_API_KEY", rpm=25),
+
+
+    # --- Paid. Uncomment when a budget exists. -----------------------------
+    # ModelSpec("claude-sonnet", "Claude Sonnet", "anthropic",
+    #           "claude-sonnet-4-6", env_key="ANTHROPIC_API_KEY", rpm=50),
+    # ModelSpec("gpt", "GPT (current default)", "openai",
+    #           "gpt-5.1", env_key="OPENAI_API_KEY", rpm=50),
 ]
 
 
@@ -58,14 +110,42 @@ MODELS = [
 # cannot tell them apart. It reports that the thing you call changed.
 # ---------------------------------------------------------------------------
 
+class _Pacer:
+    """Simple per-process request spacer. Not a token bucket: the battery is a
+    steady serial stream, so even spacing is both sufficient and gentler on a
+    shared free tier than bursting to the limit and backing off."""
+
+    def __init__(self):
+        self.last = 0.0
+        self.interval = 60.0 / DEFAULT_RPM
+
+    def set_rpm(self, rpm):
+        self.interval = 60.0 / max(rpm, 1)
+
+    def wait(self):
+        now = time.monotonic()
+        gap = self.last + self.interval - now
+        if gap > 0:
+            time.sleep(gap)
+        self.last = time.monotonic()
+
+
+PACER = _Pacer()
+
+
 def _http_post(url, headers, payload, timeout=120):
     import urllib.error
     import urllib.request
 
     data = json.dumps(payload).encode("utf-8")
+    # Some providers sit behind bot protection that rejects the default
+    # "Python-urllib/x.y" agent outright (Cloudflare error 1010). Identify the
+    # client honestly instead of disguising it.
+    headers = {"user-agent": "aliaswatch/0.1 (+https://aliaswatch.dev)", **headers}
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     last = None
     for attempt in range(MAX_RETRIES):
+        PACER.wait()
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.loads(r.read().decode("utf-8"))
@@ -73,12 +153,20 @@ def _http_post(url, headers, payload, timeout=120):
             body = e.read().decode("utf-8", "replace")[:400]
             last = f"HTTP {e.code}: {body}"
             if e.code in (429, 500, 502, 503, 504, 529):
-                time.sleep(RETRY_BASE ** attempt)
+                # Honour Retry-After when the provider sends it; otherwise back
+                # off exponentially with a floor, because retrying a 429 too
+                # soon just burns another unit of the quota.
+                ra = e.headers.get("Retry-After") if e.headers else None
+                try:
+                    delay = float(ra) if ra else max(RETRY_BASE ** attempt, 2.0)
+                except ValueError:
+                    delay = max(RETRY_BASE ** attempt, 2.0)
+                time.sleep(min(delay, 90))
                 continue
             raise RuntimeError(last)
         except Exception as e:  # noqa: BLE001
             last = str(e)
-            time.sleep(RETRY_BASE ** attempt)
+            time.sleep(min(RETRY_BASE ** attempt, 30))
     raise RuntimeError(f"exhausted retries: {last}")
 
 
@@ -159,9 +247,12 @@ ADAPTERS = {
     "google": call_google,
 }
 
-# Providers that never touch the network or a paid account, and whose output
-# must never enter the published record.
-LOCAL_PROVIDERS = {"mock", "openai_compat"}
+# Kept for compatibility; authoritative flag is ModelSpec.local.
+LOCAL_PROVIDERS = {"mock"}
+
+
+def is_local_spec(spec) -> bool:
+    return bool(getattr(spec, "local", False)) or spec.provider == "mock"
 
 
 def all_models():
@@ -190,12 +281,32 @@ def load_battery(version="v1"):
     return body
 
 
+def _ckpt_path(spec, date, root):
+    return root / date / f".{spec.key}.partial.jsonl"
+
+
+def _load_checkpoint(path):
+    """Return already-graded records keyed by item id."""
+    if not path.exists():
+        return {}
+    out = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+            out[r["id"]] = r
+        except (json.JSONDecodeError, KeyError):
+            continue
+    return out
+
+
 def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False,
-              drift=None) -> dict:
+              drift=None, progress=True, resume=True) -> dict:
     """drift: optional {"family": str, "rate": float} used only by the mock
     provider, to inject a known change and watch the detector find it."""
     is_mock = spec.provider == "mock"
-    is_local = spec.provider in LOCAL_PROVIDERS
+    is_local = is_local_spec(spec)
 
     key = os.environ.get(spec.env_key, "")
     if not key and not dry_run and not is_local:
@@ -208,12 +319,40 @@ def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False,
             return call_mock(sp, it, k, date_str=date, drift=drift)
     else:
         adapter = ADAPTERS[spec.provider]
+
+    # Pace to this provider's budget. Without this the run uses the global
+    # default, trips the provider's limit, and spends most of its time in
+    # backoff - slower than simply going at the allowed rate.
+    PACER.set_rpm(9999 if (is_mock or dry_run) else spec.rpm)
+
+    # A 166-item run against a rate-limited free tier takes 15-30 minutes.
+    # Writing only at the end means a crash at item 165 discards the whole day,
+    # and unattended in CI that silently becomes a gap in the record. Each
+    # graded item is appended to a checkpoint immediately, and a re-run of the
+    # same date resumes from it instead of paying for those calls twice.
+    root = RESULTS_LOCAL if is_local else RESULTS
+    ckpt = _ckpt_path(spec, date, root)
+    done = {} if (dry_run or not resume) else _load_checkpoint(ckpt)
+    if done and progress:
+        print(f"  resuming from checkpoint: {len(done)} items already graded")
+
+    items = [i for i in battery["items"]
+             if not (i["family"] == "tool_call" and not spec.supports_tools)]
+    total = len(items)
     records = []
     errors = 0
+    started = time.monotonic()
+    if not dry_run:
+        ckpt.parent.mkdir(parents=True, exist_ok=True)
 
-    for item in battery["items"]:
-        if item["family"] == "tool_call" and not spec.supports_tools:
+    for n, item in enumerate(items, 1):
+        if item["id"] in done:
+            rec = done[item["id"]]
+            records.append(rec)
+            if rec.get("error"):
+                errors += 1
             continue
+
         try:
             if dry_run:
                 text, calls, usage = "", [], {}
@@ -225,7 +364,7 @@ def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False,
             errors += 1
 
         g = graders.grade(item, text, calls)
-        records.append({
+        rec = {
             "id": item["id"],
             "family": item["family"],
             "response": text,
@@ -235,7 +374,26 @@ def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False,
             "reason": g.reason,
             "error": err,
             "usage": usage,
-        })
+        }
+        records.append(rec)
+
+        if not dry_run:
+            with ckpt.open("a") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+        if progress and not dry_run:
+            elapsed = time.monotonic() - started
+            rate = n / max(elapsed, 1e-6)
+            eta = int((total - n) / rate) if rate > 0 else 0
+            mark = "!" if err else ("." if g.passed is not False else "x")
+            sys.stdout.write(
+                f"\r  [{n:3d}/{total}] {mark} {item['family']:<22}"
+                f" err={errors:<3} eta={eta // 60}m{eta % 60:02d}s   ")
+            sys.stdout.flush()
+
+    if progress and not dry_run:
+        sys.stdout.write("\r" + " " * 78 + "\r")
+        sys.stdout.flush()
 
     # A day with too many transport errors is a hole, not a measurement.
     # Publishing it as data would put a fake step in the history.
@@ -287,16 +445,29 @@ def summarise(run: dict) -> dict:
 
 
 def save(run: dict):
+    """Write the day and clear the checkpoint: the run completed, so the
+    partial file has served its purpose."""
     root = RESULTS_LOCAL if run.get("provenance") == "local" else RESULTS
     d = root / run["date"]
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{run['model']}.json").write_text(json.dumps(run, indent=1, ensure_ascii=False))
     (d / f"{run['model']}.summary.json").write_text(
         json.dumps(summarise(run), indent=1, ensure_ascii=False))
+    ck = d / f".{run['model']}.partial.jsonl"
+    if ck.exists():
+        ck.unlink()
 
 
 def main():
     import argparse
+
+    # Piping into head/less closes stdout early; that is normal usage, not an
+    # error worth a traceback.
+    try:
+        import signal
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except (ImportError, AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser(
         description="Run the sealed battery against model aliases.")
     ap.add_argument("--date", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
@@ -311,6 +482,11 @@ def main():
     ap.add_argument("--list", action="store_true", help="list available models and exit")
     ap.add_argument("--free-tiers", action="store_true",
                     help="print ways to run against real models for free")
+    ap.add_argument("--no-resume", action="store_true",
+                    help="ignore any checkpoint and start the day over")
+    ap.add_argument("--quiet", action="store_true", help="no progress line")
+    ap.add_argument("--preflight", action="store_true",
+                    help="one cheap call per alias to check reachability, then exit")
     a = ap.parse_args()
 
     from .local import FREE_TIER_NOTES, LOCAL_MODELS, MOCK_MODELS
@@ -320,15 +496,51 @@ def main():
         return
 
     if a.list:
-        print(f"{'key':<14}{'provider':<15}{'alias':<22}cost")
-        print("-" * 74)
+        print(f"{'key':<20}{'alias':<26}{'rpm':<6}{'key env':<20}note")
+        print("-" * 104)
         for sp in MODELS:
-            print(f"{sp.key:<14}{sp.provider:<15}{sp.alias:<22}needs an API key")
+            print(f"{sp.key:<20}{sp.alias:<26}{sp.rpm:<6}{sp.env_key:<20}{sp.note}")
         for sp in LOCAL_MODELS:
-            print(f"{sp.key:<14}{sp.provider:<15}{sp.alias:<22}free - Ollama, local")
+            print(f"{sp.key:<20}{sp.alias:<26}{'-':<6}{'(none)':<20}local via Ollama")
         for sp in MOCK_MODELS:
-            print(f"{sp.key:<14}{sp.provider:<15}{sp.alias:<22}free - no network, no install")
+            print(f"{sp.key:<20}{sp.alias:<26}{'-':<6}{'(none)':<20}mock, no network")
         print("\nLocal and mock runs write to results-local/ and never enter the record.")
+        return
+
+    if a.preflight:
+        probe = {"prompt": "Compute 4817 + 2996. Reply with only the number.",
+                 "id": "preflight", "family": "ground_truth",
+                 "grader": "exact_numeric", "expected": "7813"}
+        ok = bad = missing = 0
+        print(f"{'model':22s}{'alias':28s}status")
+        print("-" * 78)
+        for spec in MODELS:
+            key = os.environ.get(spec.env_key, "")
+            if not key:
+                print(f"{spec.key:22s}{spec.alias:28s}SKIP  {spec.env_key} not set")
+                missing += 1
+                continue
+            PACER.set_rpm(spec.rpm)
+            try:
+                text, _, _ = ADAPTERS[spec.provider](spec, probe, key)
+                g = graders.grade(probe, text, [])
+                mark = "OK" if g.passed else "REACHABLE"
+                print(f"{spec.key:22s}{spec.alias:28s}{mark:10s}{text.strip()[:24]!r}")
+                ok += 1
+            except Exception as e:  # noqa: BLE001
+                msg = str(e).replace("\n", " ")
+                # Surface the provider's own message, which is usually the
+                # actionable part (deprecated alias, quota, wrong region).
+                for marker in ('"message":', "message:"):
+                    if marker in msg:
+                        msg = msg.split(marker, 1)[1].strip().strip('"')
+                        break
+                print(f"{spec.key:22s}{spec.alias:28s}{'FAIL':10s}{msg[:60]}")
+                bad += 1
+        print(f"\n{ok} reachable, {bad} failing, {missing} missing a key")
+        if bad:
+            print("Fix or remove failing aliases before a real run: a day with "
+                  ">5% errors is recorded as a gap, not data.")
         return
 
     battery = load_battery(a.battery)
@@ -344,7 +556,8 @@ def main():
             continue
         ran += 1
         print(f"running {spec.key} ({spec.alias})…")
-        run = run_model(spec, battery, a.date, dry_run=a.dry_run)
+        run = run_model(spec, battery, a.date, dry_run=a.dry_run,
+                        progress=not a.quiet, resume=not a.no_resume)
         sm = summarise(run)
         if a.dry_run:
             print(f"  dry run: {len(run['records'])} items graded, families="

@@ -294,11 +294,18 @@ print("local / mock separation")
 from aliaswatch import local as awlocal, runner as awrunner  # noqa: E402
 
 check("mock providers are marked local",
-      all(s.provider in awrunner.LOCAL_PROVIDERS for s in awlocal.MOCK_MODELS))
+      all(awrunner.is_local_spec(s) for s in awlocal.MOCK_MODELS))
 check("ollama providers are marked local",
-      all(s.provider in awrunner.LOCAL_PROVIDERS for s in awlocal.LOCAL_MODELS))
+      all(awrunner.is_local_spec(s) for s in awlocal.LOCAL_MODELS))
 check("hosted providers are not marked local",
-      not any(s.provider in awrunner.LOCAL_PROVIDERS for s in awrunner.MODELS))
+      not any(awrunner.is_local_spec(s) for s in awrunner.MODELS))
+# Groq and Cerebras share the openai_compat adapter with Ollama, so a
+# provider-string heuristic would misclassify them. This asserts the fix.
+check("hosted openai_compat models are not local",
+      all(not awrunner.is_local_spec(s) for s in awrunner.MODELS
+          if s.provider == "openai_compat"))
+check("every hosted model declares an rpm budget",
+      all(s.rpm > 0 for s in awrunner.MODELS))
 check("local results go to a separate directory",
       awrunner.RESULTS_LOCAL != awrunner.RESULTS)
 
@@ -321,6 +328,54 @@ print(f"  mock passing responses graded pass: {_pass_ok}/{_n}")
 print(f"  mock failing responses graded fail: {_fail_ok}/{_n}")
 check("every mock 'pass' response passes its grader", _pass_ok == _n)
 check("every mock 'fail' response fails its grader", _fail_ok == _n)
+
+# ---------------------------------------------------------------------------
+print("crash recovery")
+
+import pathlib as _pathlib2  # noqa: E402
+import shutil as _shutil  # noqa: E402
+import tempfile as _tempfile  # noqa: E402
+
+_tmp = _pathlib2.Path(_tempfile.mkdtemp())
+_orig_local_root = awrunner.RESULTS_LOCAL
+awrunner.RESULTS_LOCAL = _tmp
+try:
+    _bat2 = awrunner.load_battery("v1")
+    _sp = awlocal.MOCK_MODELS[0]
+    _date = "2026-01-01"
+    _real = awlocal.call_mock
+    _c = {"n": 0, "crash": True}
+
+    def _counted(sp, it, k, date_str="", drift=None):
+        _c["n"] += 1
+        if _c["n"] > 40 and _c["crash"]:
+            raise KeyboardInterrupt
+        return _real(sp, it, k, date_str=date_str, drift=drift)
+
+    awlocal.call_mock = _counted
+    try:
+        awrunner.run_model(_sp, _bat2, _date, progress=False)
+    except KeyboardInterrupt:
+        pass
+
+    _ck = _tmp / _date / f".{_sp.key}.partial.jsonl"
+    check("checkpoint written during a run", _ck.exists())
+    check("checkpoint holds the completed items",
+          len(_ck.read_text().splitlines()) == 40)
+
+    _c["crash"] = False
+    _c["n"] = 0
+    _run = awrunner.run_model(_sp, _bat2, _date, progress=False)
+    print(f"  resumed: {_c['n']} fresh calls, {len(_run['records'])} total records")
+    check("resume does not repeat completed items", _c["n"] == 126)
+    check("resumed run has the full battery", len(_run["records"]) == 166)
+
+    awrunner.save(_run)
+    check("checkpoint cleared once the day is saved", not _ck.exists())
+finally:
+    awlocal.call_mock = _real
+    awrunner.RESULTS_LOCAL = _orig_local_root
+    _shutil.rmtree(_tmp, ignore_errors=True)
 
 # ---------------------------------------------------------------------------
 print(f"\n{PASS} passed, {FAIL} failed")

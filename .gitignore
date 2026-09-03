@@ -20,5 +20,6 @@ signing-key
 results-local/
 dist/local/
 
-# Build output. Cloudflare Pages builds this; it is not committed.
+# Incomplete runs. Never committed - a partial day is not data.
+results/**/.*.partial.jsonl
 dist/

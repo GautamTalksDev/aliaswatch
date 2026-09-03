@@ -1,0 +1,48 @@
+{
+ "date": "2026-09-03",
+ "model": "groq-gpt-oss-120b",
+ "provenance": "hosted",
+ "incomplete": false,
+ "families": {
+  "constraint_adherence": {
+   "n": 30,
+   "fails": 6,
+   "failing_ids": [
+    "ca-ng-01",
+    "ca-ng-02",
+    "ca-ng-03",
+    "ca-ng-05",
+    "ca-ng-07",
+    "ca-ng-08"
+   ]
+  },
+  "format_compliance": {
+   "n": 30,
+   "fails": 0,
+   "failing_ids": []
+  },
+  "ground_truth": {
+   "n": 30,
+   "fails": 1,
+   "failing_ids": [
+    "gt-ex-09"
+   ]
+  },
+  "refusal_rate": {
+   "n": 30,
+   "fails": 0,
+   "failing_ids": []
+  },
+  "tool_call": {
+   "n": 30,
+   "fails": 1,
+   "failing_ids": [
+    "tc-h05"
+   ]
+  }
+ },
+ "verbosity": {
+  "n": 16,
+  "median": 879.5
+ }
+}
