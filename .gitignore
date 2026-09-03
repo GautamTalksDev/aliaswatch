@@ -13,3 +13,6 @@ dist/demo/
 *.seed
 signing-key
 .env
+
+# Windows NTFS alternate data streams
+*:Zone.Identifier
