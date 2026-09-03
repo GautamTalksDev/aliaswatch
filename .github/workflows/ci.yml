@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Battery seal is intact
+        run: python3 -m aliaswatch.runner --dry-run
+
+      - name: Graders, statistics, false-alarm and sensitivity simulations
+        run: python3 tests/test_all.py
+
+      - name: Chain verifies
+        run: python3 -m aliaswatch.log verify
+
+      - name: Site builds without a record
+        run: python3 -m aliaswatch.site
+
+  no-dependencies:
+    # The zero-dependency property is a documented security control, so it is
+    # enforced by CI rather than by good intentions.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Harness imports on a bare interpreter
+        run: |
+          python3 -c "
+          import sys, pathlib
+          sys.path.insert(0, '.')
+          import aliaswatch.graders, aliaswatch.stats, aliaswatch.runner
+          import aliaswatch.site, aliaswatch.card, aliaswatch.log, aliaswatch.cli
+          print('all modules import with stdlib only')
+          "
+      - name: Front end ships no third-party assets
+        run: |
+          if grep -rhoE 'https?://[a-zA-Z0-9.-]+' web/ --include='*.html' --include='*.js' --include='*.css' \
+             | sort -u \
+             | grep -vE '^https?://(github\.com|aliaswatch\.dev|www\.w3\.org|creativecommons\.org|www\.sitemaps\.org)$'; then
+            echo "::error::web/ references an external origin; the site must load nothing third-party"
+            exit 1
+          fi
+          echo "no third-party origins referenced"
+      - name: No innerHTML anywhere in the front end
+        run: |
+          if grep -rn 'innerHTML\|outerHTML\|document\.write\|eval(' web/*.js; then
+            echo "::error::model output must never be rendered as HTML (SECURITY.md T4)"
+            exit 1
+          fi
+          echo "front end renders text only"

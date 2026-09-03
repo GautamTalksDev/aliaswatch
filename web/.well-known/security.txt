@@ -1,0 +1,5 @@
+Contact: mailto:security@aliaswatch.dev
+Expires: 2027-09-02T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://aliaswatch.dev/.well-known/security.txt
+Policy: https://github.com/aliaswatch/aliaswatch/blob/main/SECURITY.md

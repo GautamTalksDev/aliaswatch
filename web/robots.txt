@@ -1,0 +1,5 @@
+# The record is meant to be read, cited, and crawled.
+User-agent: *
+Allow: /
+
+Sitemap: https://aliaswatch.dev/sitemap.xml

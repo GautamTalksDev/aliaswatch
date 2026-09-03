@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # GitHub Actions is the only dependency surface that exists; the harness and
+  # the site have no runtime dependencies by design (SECURITY.md T3).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5

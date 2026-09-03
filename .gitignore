@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+.venv/
+node_modules/
+
+# Build output. dist/ is committed by the daily job on the deploy branch, but
+# never from a developer machine — a hand-built site is not a record.
+dist/demo/
+
+# Never commit the signing seed. The public key IS committed.
+*.seed
+signing-key
+.env

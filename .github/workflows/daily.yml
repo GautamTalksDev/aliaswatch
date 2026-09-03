@@ -1,0 +1,86 @@
+name: daily run
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 07:00 ET, margin to publish by 09:00 ET
+  workflow_dispatch:
+
+# Least privilege by default; the one job that needs to write says so.
+permissions:
+  contents: read
+
+concurrency:
+  group: aliaswatch-daily
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      # Actions are pinned by commit SHA, not by tag: a retagged action must not
+      # be able to silently change what runs against the signing key.
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      # Both gates run before any provider call. If the battery seal is broken
+      # or detection has regressed, the day is skipped rather than recorded
+      # with a detector we can no longer describe honestly.
+      - name: Verify detector and battery seal
+        run: python3 tests/test_all.py
+
+      - name: Verify existing chain before appending
+        run: python3 -m aliaswatch.log verify
+
+      - name: Run battery
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python3 -m aliaswatch.runner
+
+      # The seed is passed by environment only — never on a command line, where
+      # it would appear in process listings and job logs.
+      - name: Sign and append the day
+        env:
+          ALIASWATCH_SIGNING_SEED: ${{ secrets.ALIASWATCH_SIGNING_SEED }}
+        run: python3 -m aliaswatch.log append "$(date -u +%Y-%m-%d)"
+
+      - name: Re-verify chain after appending
+        run: python3 -m aliaswatch.log verify
+
+      - name: Build site and cards
+        run: |
+          python3 -m aliaswatch.site
+          python3 -m aliaswatch.card
+
+      - name: Commit the day
+        run: |
+          git config user.name  "aliaswatch-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add results dist
+          git diff --staged --quiet || git commit -m "record $(date -u +%Y-%m-%d)"
+          git push
+
+      # A silent failure is worse than a loud one: a gap nobody notices becomes
+      # a gap nobody can explain later.
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const day = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `daily run failed ${day}`,
+              body: `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nThis day will appear as a gap in the record unless re-run. Do not backfill it silently — a gap is honest, an invented day is not.`
+            });

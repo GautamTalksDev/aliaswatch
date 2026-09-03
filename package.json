@@ -1,0 +1,22 @@
+{
+  "name": "aliaswatch",
+  "version": "0.1.0",
+  "description": "A daily public record of whether the major AI model aliases changed. Sealed prompt battery, deterministic graders, published noise floor, signed tamper-evident log.",
+  "keywords": ["llm", "drift", "model-drift", "evaluation", "benchmark", "transparency", "regression", "ai"],
+  "homepage": "https://aliaswatch.dev",
+  "repository": { "type": "git", "url": "git+https://github.com/GautamTalksDev/aliaswatch.git" },
+  "bugs": { "url": "https://github.com/GautamTalksDev/aliaswatch/issues" },
+  "license": "MIT",
+  "type": "module",
+  "files": ["web/", "README.md", "LICENSE", "NOTICE"],
+  "scripts": {
+    "build": "python3 -m aliaswatch.site",
+    "build:demo": "python3 -m aliaswatch.site --demo",
+    "test": "python3 tests/test_all.py",
+    "serve": "python3 -m http.server 8080 --directory dist"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": { "node": ">=20" },
+  "publishConfig": { "access": "public", "provenance": true }
+}

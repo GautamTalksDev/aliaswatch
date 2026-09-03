@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AliasWatch — did the model change today?</title>
+<meta name="description" content="A daily public record of whether the major AI model aliases changed. Sealed prompt battery, deterministic graders, published noise floor, signed tamper-evident log.">
+
+<!-- Defence in depth: these are also set as real response headers in
+     web/_headers. A meta CSP protects the page when it is opened from disk
+     or served by a host that drops headers. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; manifest-src 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="color-scheme" content="light dark">
+
+<link rel="stylesheet" href="styles.css">
+<link rel="canonical" href="https://aliaswatch.dev/">
+<link rel="alternate" type="application/json" href="data.json" title="AliasWatch record">
+
+<meta property="og:title" content="AliasWatch — did the model change today?">
+<meta property="og:description" content="The same sealed battery of prompts, every day, against every major model alias. Graded by machine. Recorded in public.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://aliaswatch.dev/">
+<meta name="twitter:card" content="summary_large_image">
+
+<script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the record</a>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <a class="brand" href="./"><b>AliasWatch</b></a>
+    <nav class="mastnav" aria-label="Primary">
+      <a href="methodology.html">Methodology</a>
+      <a href="verify.html">Verify</a>
+      <a href="legal.html">Legal</a>
+      <a href="https://github.com/GautamTalksDev/aliaswatch" rel="noopener noreferrer">Source</a>
+      <button class="themebtn" id="theme" type="button" aria-label="Change colour theme">dark</button>
+    </nav>
+  </div>
+
+  <header class="hero">
+    <h1>Did the model change today?</h1>
+    <p class="sub">
+      The same sealed battery of 166 deterministic prompts, every day, against
+      every major model alias. Graded by machine against a published noise
+      floor. Recorded in a signed, append-only log that anyone can check.
+      Last run <span id="lastrun">—</span>.
+    </p>
+  </header>
+
+  <main id="main">
+
+    <div class="controls" id="controls" role="group" aria-label="Filter the record by task family"></div>
+
+    <div class="strip" id="strip" aria-live="polite">
+      <div class="empty">Loading the record…</div>
+    </div>
+    <p class="sub small" id="striprange"></p>
+
+    <h2>How to read this</h2>
+    <p>
+      Each tick is one day. Its height is how far that day sat from the model's
+      own trailing baseline. A short tick is ordinary variation — the same
+      prompt at temperature 0 does not return the same answer twice, and that
+      noise is measured rather than assumed.
+    </p>
+    <p>
+      Hover or focus a trace and step through it with the arrow keys to see any
+      individual day. Open a model for its per-family breakdown. Filter to a
+      single family to see whether a change was concentrated or broad.
+    </p>
+    <p>
+      A day is called <strong>changed</strong> only when a family of tasks moves
+      beyond its floor on two days within three, after a false-discovery
+      correction across the six families. One loud day is published as an
+      excursion and nothing more. The
+      <a href="methodology.html">methodology</a> gives the measured false-alarm
+      rate, established before any flag was ever published.
+    </p>
+
+    <section class="verifier" aria-labelledby="vh">
+      <h2 id="vh">Check the record yourself</h2>
+      <p>
+        Each day is hashed and chained to the day before, and the resulting head
+        is signed. Rewriting any past day breaks every link after it. This
+        recomputes the whole chain in your browser — nothing is sent anywhere.
+      </p>
+      <div class="vrow">
+        <label for="vhead" class="skip">A head hash you saved earlier</label>
+        <input id="vhead" type="text" spellcheck="false" autocomplete="off"
+               placeholder="optional: paste a head hash you saved earlier">
+        <button class="vbtn" id="vgo" type="button">Verify chain</button>
+      </div>
+      <pre class="vout" id="vout">Not run yet.</pre>
+      <p>
+        Battery seal <code id="batteryseal">&mdash;</code> ·
+        <a href="verify.html">how to verify signatures offline</a>
+      </p>
+    </section>
+
+  </main>
+
+  <footer>
+    <nav aria-label="Footer">
+      <a href="methodology.html">Methodology</a>
+      <a href="verify.html">Verify</a>
+      <a href="legal.html">Legal &amp; attribution</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/GautamTalksDev/aliaswatch" rel="noopener noreferrer">Source</a>
+    </nav>
+    <p>
+      AliasWatch measures the <strong>alias</strong>, not the weights. Routing,
+      system-prompt, quantisation and weight changes all land here identically
+      and cannot be told apart. AliasWatch reports that the thing you call by
+      that name behaves differently. It never asserts that a provider swapped a
+      model.
+    </p>
+    <p>
+      Code MIT. The record is CC0. Model and company names are the trademarks of
+      their respective owners and are used here only to identify the services
+      measured. AliasWatch is not affiliated with, endorsed by, or sponsored by
+      any of them.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>

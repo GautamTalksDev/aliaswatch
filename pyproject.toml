@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aliaswatch"
+version = "0.1.0"
+description = "A daily public record of whether the major AI model aliases changed."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["llm", "drift", "evaluation", "benchmark", "transparency", "regression"]
+authors = [{ name = "AliasWatch contributors" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+# No runtime dependencies. This is a deliberate security property, not an
+# oversight: see SECURITY.md T3.
+dependencies = []
+
+[project.optional-dependencies]
+fast-crypto = ["cryptography>=42"]
+dev = ["playwright>=1.44"]
+
+[project.urls]
+Homepage = "https://aliaswatch.dev"
+Source = "https://github.com/aliaswatch/aliaswatch"
+Methodology = "https://aliaswatch.dev/methodology.html"
+
+[project.scripts]
+aliaswatch = "aliaswatch.cli:main"
+
+[tool.setuptools]
+packages = ["aliaswatch"]
+
+[tool.setuptools.package-data]
+aliaswatch = ["../battery/*.json"]
