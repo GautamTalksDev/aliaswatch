@@ -1,0 +1,30 @@
+<!--
+AliasWatch horizontal lockup: mark + wordmark.
+
+The wordmark is set in a serif to match the site's display face, with "Alias"
+in the muted ink and "Watch" in full ink - the emphasis falls on the verb,
+because the product is an act of watching, not a noun.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64"
+     role="img" aria-label="AliasWatch">
+  <title>AliasWatch</title>
+
+  <g>
+    <line x1="4" y1="32" x2="56" y2="32" stroke="currentColor" stroke-width="1.5" opacity=".28"/>
+    <g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".75">
+      <line x1="8"  y1="27" x2="8"  y2="37"/>
+      <line x1="16" y1="24" x2="16" y2="40"/>
+      <line x1="24" y1="28" x2="24" y2="36"/>
+      <line x1="32" y1="23" x2="32" y2="41"/>
+    </g>
+    <line x1="42" y1="10" x2="42" y2="54" stroke="#A8341F" stroke-width="5.5" stroke-linecap="round"/>
+    <g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".75">
+      <line x1="52" y1="26" x2="52" y2="38"/>
+    </g>
+  </g>
+
+  <text x="74" y="43" font-family="Iowan Old Style,Palatino,Georgia,ui-serif,serif"
+        font-size="34" letter-spacing="-.4">
+    <tspan fill="currentColor" opacity=".55">Alias</tspan><tspan fill="currentColor">Watch</tspan>
+  </text>
+</svg>

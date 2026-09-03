@@ -28,7 +28,7 @@ from dataclasses import dataclass, field, asdict
 
 MIN_BASELINE_DAYS = 7
 BASELINE_WINDOW = 28
-FDR_Q = 0.05                 # Benjamini–Hochberg level across families
+FDR_Q = 0.05                 # Benjamini - Hochberg level across families
 CONFIRM_DAYS = 2             # consecutive excursions required to call 'changed'
 VERBOSITY_EFFECT_MIN = 0.15  # 15% median shift before verbosity is reportable
 
@@ -167,7 +167,7 @@ def evaluate_day(
     flagged_dates: set[str],
     recent_excursions: list[bool] | None = None,
 ) -> DayVerdict:
-    """`flagged_dates` must contain every day that showed an excursion —
+    """`flagged_dates` must contain every day that showed an excursion - 
     including unconfirmed 'watch' days, not only confirmed changes. Excluding
     only confirmed days lets the elevated days fold into the trailing window,
     which raises the baseline until the detector goes blind to the very shift

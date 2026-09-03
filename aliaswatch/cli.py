@@ -18,7 +18,7 @@ COMMANDS = {
 
 
 def usage(code=0):
-    print("aliaswatch — a daily public record of whether model aliases changed\n")
+    print("aliaswatch - a daily public record of whether model aliases changed\n")
     print("usage: aliaswatch <command> [options]\n")
     width = max(len(c) for c in COMMANDS)
     for name, (_, desc) in COMMANDS.items():
@@ -40,7 +40,7 @@ def main(argv=None):
         from pathlib import Path
         path = Path(__file__).resolve().parent.parent / "tests" / "test_all.py"
         if not path.exists():
-            sys.exit("tests/test_all.py not found — run from a source checkout")
+            sys.exit("tests/test_all.py not found - run from a source checkout")
         sys.argv = [str(path)]
         runpy.run_path(str(path), run_name="__main__")
         return

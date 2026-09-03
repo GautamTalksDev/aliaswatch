@@ -1,0 +1,39 @@
+<!--
+AliasWatch icon.
+
+The mark is the product: a baseline, ordinary variation around it, and one
+tick that breaks out. Read left to right it is the whole method - measure the
+noise, then notice the thing that exceeds it.
+
+currentColor is used throughout so the mark inherits the page's ink and works
+in light and dark without a second file. The one exception is the alert tick,
+which carries its own colour because that contrast is the meaning of the mark.
+
+Square, 64x64 viewBox, safe down to 16px: the ticks are on whole-pixel x
+positions with 6px spacing so they never blur into each other at small sizes.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"
+     role="img" aria-label="AliasWatch">
+  <title>AliasWatch</title>
+
+  <!-- baseline -->
+  <line x1="6" y1="32" x2="58" y2="32"
+        stroke="currentColor" stroke-width="1.5" opacity=".28"/>
+
+  <!-- ordinary variation -->
+  <g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".75">
+    <line x1="10" y1="27" x2="10" y2="37"/>
+    <line x1="18" y1="24" x2="18" y2="40"/>
+    <line x1="26" y1="28" x2="26" y2="36"/>
+    <line x1="34" y1="23" x2="34" y2="41"/>
+  </g>
+
+  <!-- the excursion: full height, its own colour, unmistakable -->
+  <line x1="44" y1="8" x2="44" y2="56"
+        stroke="#A8341F" stroke-width="5.5" stroke-linecap="round"/>
+
+  <!-- after -->
+  <g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".75">
+    <line x1="52" y1="26" x2="52" y2="38"/>
+  </g>
+</svg>

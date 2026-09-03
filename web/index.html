@@ -3,129 +3,243 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AliasWatch — did the model change today?</title>
-<meta name="description" content="A daily public record of whether the major AI model aliases changed. Sealed prompt battery, deterministic graders, published noise floor, signed tamper-evident log.">
-
-<!-- Defence in depth: these are also set as real response headers in
-     web/_headers. A meta CSP protects the page when it is opened from disk
-     or served by a host that drops headers. -->
+<title>AliasWatch - the public record of when AI models change</title>
+<meta name="description" content="Every day, the same sealed battery of prompts against every major model alias. When the thing you call by that name starts behaving differently, you find out from a signed public record - not from a rumour.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; manifest-src 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="color-scheme" content="light dark">
-
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="landing.css">
 <link rel="canonical" href="https://aliaswatch.dev/">
-<link rel="alternate" type="application/json" href="data.json" title="AliasWatch record">
-
-<meta property="og:title" content="AliasWatch — did the model change today?">
-<meta property="og:description" content="The same sealed battery of prompts, every day, against every major model alias. Graded by machine. Recorded in public.">
+<meta property="og:title" content="AliasWatch - did the model change today?">
+<meta property="og:description" content="A signed, public, daily record of whether the major AI model aliases changed. No model judges another model.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://aliaswatch.dev/">
-<meta name="twitter:card" content="summary_large_image">
-
-<script src="app.js" defer></script>
+<script src="landing.js" defer></script>
 </head>
-<body>
-<a class="skip" href="#main">Skip to the record</a>
+<body class="landing">
+<a class="skip" href="#main">Skip to content</a>
 
 <div class="wrap">
-
   <div class="masthead">
-    <a class="brand" href="./"><b>AliasWatch</b></a>
+    <a class="brand" href="./" aria-label="AliasWatch home"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><line x1="6" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="1.5" opacity=".28"/><g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".75"><line x1="10" y1="27" x2="10" y2="37"/><line x1="18" y1="24" x2="18" y2="40"/><line x1="26" y1="28" x2="26" y2="36"/><line x1="34" y1="23" x2="34" y2="41"/></g><line x1="44" y1="8" x2="44" y2="56" stroke="var(--changed)" stroke-width="5.5" stroke-linecap="round"/><g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".75"><line x1="52" y1="26" x2="52" y2="38"/></g></svg><b>AliasWatch</b></a>
     <nav class="mastnav" aria-label="Primary">
+      <a href="record.html">Record</a>
       <a href="methodology.html">Methodology</a>
       <a href="verify.html">Verify</a>
-      <a href="legal.html">Legal</a>
       <a href="https://github.com/GautamTalksDev/aliaswatch" rel="noopener noreferrer">Source</a>
       <button class="themebtn" id="theme" type="button" aria-label="Change colour theme">dark</button>
     </nav>
   </div>
+</div>
 
-  <header class="hero">
-    <h1>Did the model change today?</h1>
-    <p class="sub">
-      The same sealed battery of 166 deterministic prompts, every day, against
-      every major model alias. Graded by machine against a published noise
-      floor. Recorded in a signed, append-only log that anyone can check.
-      Last run <span id="lastrun">—</span>.
-    </p>
-  </header>
+<main id="main">
 
-  <main id="main">
-
-    <div class="controls" id="controls" role="group" aria-label="Filter the record by task family"></div>
-
-    <div class="strip" id="strip" aria-live="polite">
-      <div class="empty">Loading the record…</div>
-    </div>
-    <p class="sub small" id="striprange"></p>
-
-    <h2>How to read this</h2>
-    <p>
-      Each tick is one day. Its height is how far that day sat from the model's
-      own trailing baseline. A short tick is ordinary variation — the same
-      prompt at temperature 0 does not return the same answer twice, and that
-      noise is measured rather than assumed.
-    </p>
-    <p>
-      Hover or focus a trace and step through it with the arrow keys to see any
-      individual day. Open a model for its per-family breakdown. Filter to a
-      single family to see whether a change was concentrated or broad.
-    </p>
-    <p>
-      A day is called <strong>changed</strong> only when a family of tasks moves
-      beyond its floor on two days within three, after a false-discovery
-      correction across the six families. One loud day is published as an
-      excursion and nothing more. The
-      <a href="methodology.html">methodology</a> gives the measured false-alarm
-      rate, established before any flag was ever published.
-    </p>
-
-    <section class="verifier" aria-labelledby="vh">
-      <h2 id="vh">Check the record yourself</h2>
-      <p>
-        Each day is hashed and chained to the day before, and the resulting head
-        is signed. Rewriting any past day breaks every link after it. This
-        recomputes the whole chain in your browser — nothing is sent anywhere.
+  <!-- ============================================================ HERO -->
+  <section class="hero-l">
+    <div class="wrap">
+      <p class="eyebrow">A public record of things that change silently</p>
+      <h1 class="h-l">The model you call by that name<br>is not always the same model.</h1>
+      <p class="lede">
+        Every day, AliasWatch sends the same sealed battery of prompts to every
+        major AI model alias, grades the answers by machine, and writes the
+        result to a signed public log. When the thing you depend on starts
+        behaving differently, you find out from a record - not a rumour.
       </p>
-      <div class="vrow">
-        <label for="vhead" class="skip">A head hash you saved earlier</label>
-        <input id="vhead" type="text" spellcheck="false" autocomplete="off"
-               placeholder="optional: paste a head hash you saved earlier">
-        <button class="vbtn" id="vgo" type="button">Verify chain</button>
+      <div class="cta-row">
+        <a class="cta" href="record.html">See today's record</a>
+        <button class="cta ghost" id="replay-jump" type="button">Watch it catch a change ↓</button>
       </div>
-      <pre class="vout" id="vout">Not run yet.</pre>
-      <p>
-        Battery seal <code id="batteryseal">&mdash;</code> ·
-        <a href="verify.html">how to verify signatures offline</a>
+    </div>
+
+    <div class="hero-trace" aria-hidden="true">
+      <svg id="hero-svg" viewBox="0 0 1400 160" preserveAspectRatio="none"></svg>
+    </div>
+    <p class="wrap hero-cap" id="hero-cap">Loading the record…</p>
+  </section>
+
+  <!-- ========================================================= PROBLEM -->
+  <section class="band">
+    <div class="wrap two">
+      <div>
+        <h2 class="h2-l">"Did it get nerfed?"</h2>
+        <p>
+          It is one of the most repeated questions in AI. Every week, someone is
+          certain their model got worse overnight. Sometimes they are right.
+          Sometimes it is Tuesday.
+        </p>
+        <p>
+          The problem is not that models change. Providers reroute, re-quantise,
+          adjust system prompts, and swap weights behind a stable name, and
+          that is their right. The problem is that <strong>there is no neutral
+          record</strong>. Everyone has a feeling. Nobody has a number.
+        </p>
+      </div>
+      <div class="quotes" aria-label="The kind of thing people say">
+        <blockquote>"Refusing stuff it did fine last week."</blockquote>
+        <blockquote>"Same prompt, totally different output. Nothing changed on my end."</blockquote>
+        <blockquote>"Is it just me or is it dumber today?"</blockquote>
+        <p class="quotes-cap">Composite paraphrases, not attributed quotations.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= REPLAY -->
+  <section class="band alt" id="replay">
+    <div class="wrap">
+      <h2 class="h2-l">Watch it catch one.</h2>
+      <p class="lede-s">
+        Forty simulated days. On day 25 one model's refusal rate quietly climbs
+        from 5% to 30% on a single family of tasks - the kind of shift that
+        vanishes inside an aggregate score. Press play.
       </p>
-    </section>
 
-  </main>
+      <div class="replay-box">
+        <div class="replay-head">
+          <div>
+            <span class="rp-name" id="rp-name">Model B</span>
+            <span class="alias" id="rp-alias">mock-b-v1</span>
+          </div>
+          <div class="rp-verdict" id="rp-verdict"><span class="dot s-baselining"></span>collecting baseline</div>
+        </div>
+        <svg id="rp-svg" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-label="Replay of a detected change"></svg>
+        <div class="rp-meta">
+          <span id="rp-day">day 0 of 40</span>
+          <span id="rp-fam"></span>
+        </div>
+        <div class="rp-controls">
+          <button class="cta" id="rp-play" type="button">Play</button>
+          <button class="cta ghost" id="rp-reset" type="button">Reset</button>
+          <label class="rp-speed">speed <input id="rp-speed" type="range" min="1" max="5" value="3"></label>
+        </div>
+        <ol class="rp-log" id="rp-log" aria-live="polite"></ol>
+      </div>
+      <p class="fine">
+        This replay is generated locally in your browser from a documented
+        simulator. It is here to show the method. The <a href="record.html">record</a>
+        is real, and it is signed.
+      </p>
+    </div>
+  </section>
 
+  <!-- ============================================================ HOW -->
+  <section class="band">
+    <div class="wrap">
+      <h2 class="h2-l">How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <span class="stepn">01</span>
+          <h3>Ask the same questions</h3>
+          <p>166 prompts in six families - facts, format, constraints, refusals,
+          tool calls, verbosity - sealed with a hash so they can never be
+          quietly edited to change the result.</p>
+        </div>
+        <div class="step">
+          <span class="stepn">02</span>
+          <h3>Grade by machine</h3>
+          <p>Exact match, regex, schema, numeric tolerance. Never a language
+          model judging another language model. A grader that drifts would
+          make the whole record meaningless.</p>
+        </div>
+        <div class="step">
+          <span class="stepn">03</span>
+          <h3>Measure the noise first</h3>
+          <p>Temperature 0 is not deterministic. Each model gets its own
+          per-family noise floor from its own history, and only movement
+          beyond that floor counts - corrected for six chances a day to be
+          wrong.</p>
+        </div>
+        <div class="step">
+          <span class="stepn">04</span>
+          <h3>Sign it and publish it</h3>
+          <p>Every day is hashed, chained to the day before, and signed.
+          Rewriting history breaks every link after it. You can verify the
+          whole chain in your browser, or offline with no dependencies.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= NUMBERS -->
+  <section class="band alt">
+    <div class="wrap stats" id="stats">
+      <div class="stat"><span class="big" data-count="166">0</span><span class="lbl">sealed prompts</span></div>
+      <div class="stat"><span class="big" data-count="6">0</span><span class="lbl">task families</span></div>
+      <div class="stat"><span class="big" id="stat-days" data-count="0">0</span><span class="lbl">model-days recorded</span></div>
+      <div class="stat"><span class="big" data-count="0.71" data-suffix="%" data-dec="2">0</span><span class="lbl">measured false-alarm rate</span></div>
+      <div class="stat"><span class="big" data-count="0">0</span><span class="lbl">LLM judges</span></div>
+      <div class="stat"><span class="big" data-count="0">0</span><span class="lbl">third-party scripts on this site</span></div>
+    </div>
+  </section>
+
+  <!-- ========================================================= HONESTY -->
+  <section class="band">
+    <div class="wrap two">
+      <div>
+        <h2 class="h2-l">What it will never tell you</h2>
+        <p>
+          AliasWatch measures the <strong>alias</strong> - the name you send
+          your requests to - not the weights behind it. A routing change, a
+          hidden system-prompt change, a quantisation change and a weight swap
+          all look identical from the outside.
+        </p>
+        <p>
+          So it reports that the thing you call by that name behaves
+          differently. It never says <em>why</em>, never says a provider
+          "nerfed" anything, and never characterises a model as worse. That
+          restraint is enforced in code, and it is the reason the record can
+          be cited.
+        </p>
+      </div>
+      <div>
+        <h2 class="h2-l">Why you can trust it</h2>
+        <ul class="trust">
+          <li>Raw model outputs archived for every day, forever</li>
+          <li>Graders and battery public; re-run them and get the same numbers</li>
+          <li>False-alarm rate measured by simulation <em>before</em> the first flag was ever published</li>
+          <li>Ed25519-signed, hash-chained daily log</li>
+          <li>Gaps shown as gaps - an incomplete day is never published as data</li>
+          <li>No accounts, no analytics, no cookies, no external requests</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ CTA -->
+  <section class="band cta-band">
+    <div class="wrap">
+      <h2 class="h2-l">Stop guessing.</h2>
+      <p class="lede-s">
+        The record updates every morning. Watch the repository for changes,
+        subscribe to the feed, or run the battery yourself.
+      </p>
+      <div class="cta-row">
+        <a class="cta" href="record.html">Open the record</a>
+        <a class="cta ghost" href="https://github.com/GautamTalksDev/aliaswatch" rel="noopener noreferrer">Star on GitHub</a>
+        <a class="cta ghost" href="feed.xml">Subscribe (RSS)</a>
+      </div>
+      <pre class="install">pip install aliaswatch
+aliaswatch run --free-tiers</pre>
+    </div>
+  </section>
+
+</main>
+
+<div class="wrap">
   <footer>
     <nav aria-label="Footer">
+      <a href="record.html">Record</a>
       <a href="methodology.html">Methodology</a>
       <a href="verify.html">Verify</a>
       <a href="legal.html">Legal &amp; attribution</a>
       <a href="privacy.html">Privacy</a>
-      <a href="https://github.com/GautamTalksDev/aliaswatch" rel="noopener noreferrer">Source</a>
     </nav>
-    <p>
-      AliasWatch measures the <strong>alias</strong>, not the weights. Routing,
-      system-prompt, quantisation and weight changes all land here identically
-      and cannot be told apart. AliasWatch reports that the thing you call by
-      that name behaves differently. It never asserts that a provider swapped a
-      model.
-    </p>
-    <p>
-      Code MIT. The record is CC0. Model and company names are the trademarks of
-      their respective owners and are used here only to identify the services
-      measured. AliasWatch is not affiliated with, endorsed by, or sponsored by
-      any of them.
-    </p>
+    <p>Code MIT. The record is CC0. Model and company names are the trademarks
+    of their respective owners and are used only to identify the services
+    measured. AliasWatch is not affiliated with, endorsed by, or sponsored by
+    any of them.</p>
   </footer>
-
 </div>
 </body>
 </html>

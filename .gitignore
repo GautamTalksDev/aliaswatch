@@ -6,7 +6,7 @@ build/
 node_modules/
 
 # Build output. dist/ is committed by the daily job on the deploy branch, but
-# never from a developer machine — a hand-built site is not a record.
+# never from a developer machine - a hand-built site is not a record.
 dist/demo/
 
 # Never commit the signing seed. The public key IS committed.
@@ -14,5 +14,11 @@ dist/demo/
 signing-key
 .env
 
-# Windows NTFS alternate data streams
-*:Zone.Identifier
+# Local and mock runs. Never committed: a public record whose days were
+# generated on a laptop is worth nothing, so the separation is enforced here
+# as well as in code.
+results-local/
+dist/local/
+
+# Build output. Cloudflare Pages builds this; it is not committed.
+dist/

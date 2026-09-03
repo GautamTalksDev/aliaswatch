@@ -1,4 +1,4 @@
-# Setup — from this folder to a running project
+# Setup - from this folder to a running project
 
 Order matters: the name has to be claimed before anything is pushed publicly.
 
@@ -6,7 +6,7 @@ Order matters: the name has to be claimed before anything is pushed publicly.
 
 **Ubuntu under WSL is the right place.** Reasons that actually matter here:
 the daily job runs on `ubuntu-latest` in GitHub Actions, so developing on the
-same OS removes an entire class of "works on my machine" differences —
+same OS removes an entire class of "works on my machine" differences - 
 line endings, path casing, and `python3` vs `python` in particular. Cursor
 connects to WSL over the Remote-WSL extension and behaves normally.
 
@@ -34,7 +34,7 @@ Checked on 2 September 2026:
 | aliaswatch.dev | no DNS record |
 | aliaswatch.com | **taken** (parked) |
 
-Claim in this order — registry names are the ones that get sniped:
+Claim in this order - registry names are the ones that get sniped:
 
 ```bash
 # npm (reserves the name immediately)
@@ -52,7 +52,7 @@ Then the GitHub org `aliaswatch`, then `aliaswatch.dev`.
 
 **Publishing a v0.1.0 placeholder is a real decision, not a formality.** It
 reserves the name but also means the first thing anyone installing it gets is
-an unfinished tool. Ship it with the README as-is — the README states the kill
+an unfinished tool. Ship it with the README as-is - the README states the kill
 test and the limitations on its first screen, which is an honest thing to have
 published.
 
@@ -65,6 +65,23 @@ python3 -m aliaswatch.log keygen --write-pub
 This prints a seed and writes `signing-key.pub`. Commit the **public key**.
 Put the seed in the GitHub Actions secret `ALIASWATCH_SIGNING_SEED`. Never
 commit it, never paste it into a chat, never echo it in a shell that logs.
+
+## 2a. Before you pay for anything
+
+Nothing here requires a paid key to develop against. Prove the pipeline works
+on your own machine first:
+
+```bash
+python3 tests/test_all.py                        # 70 tests, no network
+python3 -m aliaswatch.local --days 40 --clean    # simulate a record
+python3 -m aliaswatch.site --local
+python3 -m http.server 8080 --directory dist/local
+```
+
+When you do want real measurements, start with the free tiers
+(`python3 -m aliaswatch.runner --free-tiers`). Gemini's needs no card. A
+single-provider index is still a real index - it is better to launch measuring
+one model honestly than to wait until you can afford three.
 
 ## 3. Repository secrets
 
@@ -105,7 +122,7 @@ is the one item in this whole project that no amount of engineering resolves.
 
 The site cannot say anything until each model has at least seven days of
 baseline. Run privately, publish nothing, and let the floors establish. The
-first public page should already have history on it — an empty instrument is
+first public page should already have history on it - an empty instrument is
 not a launch.
 
 ## Daily commands

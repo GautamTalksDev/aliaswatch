@@ -12,7 +12,7 @@ model alias at temperature 0 with seeds pinned where the provider supports them.
 The battery is published with a SHA-256 over its canonical (RFC 8785-style)
 serialisation. The runner verifies the seal on every run and refuses to start if
 it fails. A revision means publishing `v2.json` and running both batteries in
-parallel for fourteen days — never editing `v1`, which would invalidate every
+parallel for fourteen days - never editing `v1`, which would invalidate every
 comparison against every prior day.
 
 ## No model judges another model
@@ -50,7 +50,7 @@ noise is measured per model per family, not assumed.
    for thirty days.
 3. Exact two-sided binomial test per family. Two-sided because a family can drift
    *better*, and a sudden improvement is just as much a change worth recording.
-4. Six p-values corrected with Benjamini–Hochberg at q = 0.05. Testing six
+4. Six p-values corrected with Benjamini - Hochberg at q = 0.05. Testing six
    families daily is six chances a day to be wrong; uncorrected, AliasWatch would
    flag something roughly every three days by accident alone.
 
@@ -59,7 +59,7 @@ noise is measured per model per family, not assumed.
 Real regressions are concentrated: refusals move while tool calls do not. Pooling
 all 166 items into one flip count dilutes a sharp 30-item move below the floor,
 and the site reports "stable" while users are complaining. The worked example:
-one family moving 5% → 25% shifts the aggregate from 18/150 to 24/150 — a 4%
+one family moving 5% → 25% shifts the aggregate from 18/150 to 24/150 - a 4%
 change in the total, well inside ordinary variation. Per-family, it is
 overwhelming.
 
@@ -74,7 +74,7 @@ a genuine shift does not clear the bar every single day.
 
 ## How often AliasWatch is wrong
 
-Measured by Monte Carlo under the null hypothesis that nothing ever changes —
+Measured by Monte Carlo under the null hypothesis that nothing ever changes - 
 every item an independent Bernoulli draw at its family's true rate, across 6,780
 model-days.
 
@@ -88,7 +88,7 @@ At three models that is roughly one false alarm every seven weeks across the
 whole site.
 
 **The trade, stated plainly.** An earlier rule requiring two strictly consecutive
-excursions scored a far better false-alarm rate of 0.015% — and failed to detect
+excursions scored a far better false-alarm rate of 0.015% - and failed to detect
 the same 5% → 25% shift at all within thirty days. Sensitivity was bought with
 specificity, deliberately. Both numbers are published because the trade is the
 interesting part, and because a detector that only reports its best-looking

@@ -1,7 +1,7 @@
 """Daily share card.
 
 This is the growth engine, so it has one job: be screenshot-legible at thumbnail
-size and be impossible to misread. Two rules it must never break —
+size and be impossible to misread. Two rules it must never break - 
 
 1. It never says "nerfed", "degraded", "worse", or names a cause. The card
    states what moved and links to the raw numbers. The moment the card editorialises,
@@ -124,7 +124,7 @@ def main():
     from .site import build_models, make_demo
     models = make_demo() if a.demo else build_models()
     if not models:
-        print("no record yet — no cards generated")
+        print("no record yet - no cards generated")
         return
 
     try:

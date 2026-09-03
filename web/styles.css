@@ -1,4 +1,4 @@
-/* AliasWatch — no third-party CSS, no webfonts, no external requests.
+/* AliasWatch - no third-party CSS, no webfonts, no external requests.
    That is a security posture as much as an aesthetic one: a site whose entire
    claim is integrity should not execute or fetch code it does not control.
    Personality therefore comes from the type scale and the instrument motif,
@@ -304,3 +304,9 @@ footer nav { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem; }
 /* Replaces a former inline style attribute; inline styles are refused by the
    Content-Security-Policy, which is the intended behaviour. */
 .sub.small { font-size: .85rem; margin-top: .75rem; }
+
+/* Brand lockup. The mark is inline SVG rather than an <img> so it inherits
+   the current ink and the --changed token in both themes without a second
+   asset or an extra request. */
+.brand { display: inline-flex; align-items: center; gap: .5rem; }
+.brand .mark { width: 1.6rem; height: 1.6rem; flex: none; }

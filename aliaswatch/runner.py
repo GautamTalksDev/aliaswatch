@@ -20,6 +20,10 @@ from . import graders
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results"
+# Local and mock runs are physically separated from the published record.
+# A public log whose days were generated locally is worthless, so this is a
+# different directory rather than a flag on the same one.
+RESULTS_LOCAL = ROOT / "results-local"
 MAX_RETRIES = 4
 RETRY_BASE = 2.0
 
@@ -155,6 +159,16 @@ ADAPTERS = {
     "google": call_google,
 }
 
+# Providers that never touch the network or a paid account, and whose output
+# must never enter the published record.
+LOCAL_PROVIDERS = {"mock", "openai_compat"}
+
+
+def all_models():
+    """Hosted models plus the local/free ones."""
+    from .local import LOCAL_MODELS, MOCK_MODELS
+    return list(MODELS) + list(LOCAL_MODELS) + list(MOCK_MODELS)
+
 
 # ---------------------------------------------------------------------------
 
@@ -176,12 +190,24 @@ def load_battery(version="v1"):
     return body
 
 
-def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False) -> dict:
+def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False,
+              drift=None) -> dict:
+    """drift: optional {"family": str, "rate": float} used only by the mock
+    provider, to inject a known change and watch the detector find it."""
+    is_mock = spec.provider == "mock"
+    is_local = spec.provider in LOCAL_PROVIDERS
+
     key = os.environ.get(spec.env_key, "")
-    if not key and not dry_run:
+    if not key and not dry_run and not is_local:
         raise SystemExit(f"missing {spec.env_key}")
 
-    adapter = ADAPTERS[spec.provider]
+    if is_mock:
+        from .local import call_mock
+
+        def adapter(sp, it, k):
+            return call_mock(sp, it, k, date_str=date, drift=drift)
+    else:
+        adapter = ADAPTERS[spec.provider]
     records = []
     errors = 0
 
@@ -221,6 +247,9 @@ def run_model(spec: ModelSpec, battery: dict, date: str, dry_run=False) -> dict:
         "label": spec.label,
         "alias": spec.alias,
         "date": date,
+        # Stamped on every record so local data can never be mistaken for a
+        # measurement, even if the files are moved by hand.
+        "provenance": "local" if is_local else "hosted",
         "battery_version": battery["battery_version"],
         "battery_sha256": battery["sha256"],
         "run_started_utc": datetime.now(timezone.utc).isoformat(),
@@ -250,6 +279,7 @@ def summarise(run: dict) -> dict:
     return {
         "date": run["date"],
         "model": run["model"],
+        "provenance": run.get("provenance", "hosted"),
         "incomplete": run["incomplete"],
         "families": fams,
         "verbosity": {"n": len(lengths), "median": median(lengths) if lengths else None},
@@ -257,7 +287,8 @@ def summarise(run: dict) -> dict:
 
 
 def save(run: dict):
-    d = RESULTS / run["date"]
+    root = RESULTS_LOCAL if run.get("provenance") == "local" else RESULTS
+    d = root / run["date"]
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{run['model']}.json").write_text(json.dumps(run, indent=1, ensure_ascii=False))
     (d / f"{run['model']}.summary.json").write_text(
@@ -266,33 +297,71 @@ def save(run: dict):
 
 def main():
     import argparse
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description="Run the sealed battery against model aliases.")
     ap.add_argument("--date", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     ap.add_argument("--models", default="")
     ap.add_argument("--battery", default="v1")
     ap.add_argument("--dry-run", action="store_true",
-                    help="exercise the pipeline with empty responses; writes nothing to results/")
+                    help="exercise the pipeline with empty responses; writes nothing")
+    ap.add_argument("--mock", action="store_true",
+                    help="keyless mock providers, no network (writes to results-local/)")
+    ap.add_argument("--local", action="store_true",
+                    help="local Ollama models (writes to results-local/)")
+    ap.add_argument("--list", action="store_true", help="list available models and exit")
+    ap.add_argument("--free-tiers", action="store_true",
+                    help="print ways to run against real models for free")
     a = ap.parse_args()
 
-    battery = load_battery(a.battery)
-    print(f"battery {battery['battery_version']} sealed sha256={battery['sha256'][:16]}… "
-          f"({battery['item_count']} items)")
+    from .local import FREE_TIER_NOTES, LOCAL_MODELS, MOCK_MODELS
 
+    if a.free_tiers:
+        print(FREE_TIER_NOTES)
+        return
+
+    if a.list:
+        print(f"{'key':<14}{'provider':<15}{'alias':<22}cost")
+        print("-" * 74)
+        for sp in MODELS:
+            print(f"{sp.key:<14}{sp.provider:<15}{sp.alias:<22}needs an API key")
+        for sp in LOCAL_MODELS:
+            print(f"{sp.key:<14}{sp.provider:<15}{sp.alias:<22}free - Ollama, local")
+        for sp in MOCK_MODELS:
+            print(f"{sp.key:<14}{sp.provider:<15}{sp.alias:<22}free - no network, no install")
+        print("\nLocal and mock runs write to results-local/ and never enter the record.")
+        return
+
+    battery = load_battery(a.battery)
+    print(f"battery {battery['battery_version']} sealed "
+          f"sha256={battery['sha256'][:16]}… ({battery['item_count']} items)")
+
+    pool = MOCK_MODELS if a.mock else (LOCAL_MODELS if a.local else MODELS)
     wanted = set(a.models.split(",")) if a.models else None
-    for spec in MODELS:
+
+    ran = 0
+    for spec in pool:
         if wanted and spec.key not in wanted:
             continue
+        ran += 1
         print(f"running {spec.key} ({spec.alias})…")
         run = run_model(spec, battery, a.date, dry_run=a.dry_run)
+        sm = summarise(run)
         if a.dry_run:
-            s = summarise(run)
             print(f"  dry run: {len(run['records'])} items graded, families="
-                  f"{ {k: v['fails'] for k, v in s['families'].items()} }")
+                  f"{ {k: v['fails'] for k, v in sm['families'].items()} }")
             continue
         if run["incomplete"]:
-            print(f"  INCOMPLETE ({run['error_rate']:.1%} errors) — recorded as a gap, not a day")
+            print(f"  INCOMPLETE ({run['error_rate']:.1%} errors) - "
+                  "recorded as a gap, not a day")
         save(run)
-        print(f"  saved results/{a.date}/{spec.key}.json")
+        where = "results-local" if run["provenance"] == "local" else "results"
+        fails = {k: f"{v['fails']}/{v['n']}" for k, v in sorted(sm["families"].items())}
+        print(f"  saved {where}/{a.date}/{spec.key}.json")
+        print(f"  {fails}  verbosity median "
+              f"{sm['verbosity']['median'] and round(sm['verbosity']['median'])} words")
+
+    if not ran:
+        print("no models matched - try --list")
 
 
 if __name__ == "__main__":

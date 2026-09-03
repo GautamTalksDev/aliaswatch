@@ -299,7 +299,7 @@ function detailPanel(m) {
     text: "Raw responses and per-item grades for this day",
   });
   link.appendChild(a);
-  link.appendChild(el("span", { text: " — re-running the published graders over them reproduces these numbers exactly." }));
+  link.appendChild(el("span", { text: " - re-running the published graders over them reproduces these numbers exactly." }));
   inner.appendChild(link);
 
   const panel = el("div", { class: "detail", hidden: "" });
@@ -351,7 +351,7 @@ function modelRow(m, i) {
   });
 
   /* The trace lives inside a button. Its arrow-key handling must not be
-     swallowed by the button, but clicks must still reach the button — the
+     swallowed by the button, but clicks must still reach the button - the
      trace is the widest part of the row and dead pointer area there reads as
      a broken control. */
   trace.addEventListener("keydown", (e) => {
@@ -463,7 +463,7 @@ function wireVerifier() {
 
     lines.push("");
     lines.push("This check recomputes hashes only. Signature verification needs the");
-    lines.push("published key — see the Verify page for the offline command.");
+    lines.push("published key - see the Verify page for the offline command.");
 
     out.className = "vout " + (problems.length ? "bad" : "ok");
     out.textContent = lines.join("\n");
@@ -537,7 +537,7 @@ async function boot() {
   }
 
   const lr = $("#lastrun");
-  if (lr) lr.textContent = DATA.last_run || "—";
+  if (lr) lr.textContent = DATA.last_run || " - ";
   const bs = $("#batteryseal");
   if (bs) bs.textContent = (DATA.battery_sha256 || "").slice(0, 16) + "…";
 

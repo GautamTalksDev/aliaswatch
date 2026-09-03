@@ -11,9 +11,9 @@ operator's jurisdiction should review this page.
 
 | Component | Licence |
 |---|---|
-| Source code (`aliaswatch/`, `web/`, `tests/`, `build_battery.py`) | MIT — see `LICENSE` |
-| The prompt battery (`battery/v1.json`) | CC0 1.0 — see `LICENSE-DATA` |
-| The published record (`results/`, `log.jsonl`) | CC0 1.0 — see `LICENSE-DATA` |
+| Source code (`aliaswatch/`, `web/`, `tests/`, `build_battery.py`) | MIT - see `LICENSE` |
+| The prompt battery (`battery/v1.json`) | CC0 1.0 - see `LICENSE-DATA` |
+| The published record (`results/`, `log.jsonl`) | CC0 1.0 - see `LICENSE-DATA` |
 | Documentation (`*.md`, site prose) | CC BY 4.0 |
 
 The record is CC0 deliberately. A public measurement that people are asked to
@@ -44,7 +44,7 @@ that will not say what it measured is useless.
 
 Model names, product names and company names are the trademarks or registered
 trademarks of their respective owners. They are used here solely to identify
-the services being measured — nominative fair use. Specifically:
+the services being measured - nominative fair use. Specifically:
 
 - AliasWatch is **not affiliated with, endorsed by, sponsored by, or connected
   to** any AI provider.
@@ -90,7 +90,7 @@ anyone can check it.
 - that a model is worse, degraded, or of lower quality;
 - any explanation whatsoever of *why* a measurement moved.
 
-**Why the distinction is load-bearing.** AliasWatch measures an *alias* — a
+**Why the distinction is load-bearing.** AliasWatch measures an *alias* - a
 name pointing at a serving stack. A routing change, an infrastructure change, a
 hidden system-prompt change, a serving-quantisation change and a weight change
 all produce identical evidence here. Claiming to know which occurred would be an
@@ -121,7 +121,7 @@ indirect, incidental, special, consequential or exemplary damages arising from
 use of, or reliance on, this site or its data.
 
 The measurements are a research and transparency artifact. They are **not**
-advice — not procurement advice, not investment advice, not a certification, not
+advice - not procurement advice, not investment advice, not a certification, not
 a benchmark of model quality, and not a service-level guarantee. Do not make
 purchasing, financial, safety-critical or clinical decisions on the basis of
 this record.

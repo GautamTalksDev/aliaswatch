@@ -2,7 +2,7 @@
 
 The value of AliasWatch is entirely that people believe the history. A public
 JSON file in a git repo is trustworthy only as far as the repo owner is
-trusted — and the repo owner is exactly the party with an incentive to
+trusted - and the repo owner is exactly the party with an incentive to
 retroactively adjust a day.
 
 So each day's results are hashed, chained to the previous day (Merkle-style
@@ -14,7 +14,7 @@ half is published in the repository. Anyone can verify offline that:
   * and the head was signed by the holder of the published key.
 
 Rewriting any past day breaks every subsequent link. That does not make
-tampering impossible — the key holder could re-sign a rewritten chain — but it
+tampering impossible - the key holder could re-sign a rewritten chain - but it
 makes it *loud*: anyone holding an older signed head can prove the chain forked.
 Publishing heads to a third party (a git tag, a social post, archive.org) turns
 that into a practical guarantee.
@@ -60,7 +60,7 @@ def digest_day(date_str: str) -> tuple[str, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# Ed25519 — pure-Python fallback (RFC 8032). Used only if `cryptography` is
+# Ed25519 - pure-Python fallback (RFC 8032). Used only if `cryptography` is
 # unavailable, so that verification works in any environment.
 # ---------------------------------------------------------------------------
 
@@ -216,6 +216,26 @@ def verify(pub_hex: str, msg: bytes, sig_hex: str) -> bool:
 
 # ---------------------------------------------------------------------------
 
+def _refuse_local(date_str: str) -> None:
+    """Signing is what turns a file into part of the public record, so this is
+    the right chokepoint: mock and locally-run results must never be signed,
+    however they got into results/."""
+    d = RESULTS / date_str
+    if not d.exists():
+        raise SystemExit(f"no results for {date_str}")
+    for p in d.glob("*.summary.json"):
+        try:
+            prov = json.loads(p.read_text()).get("provenance", "hosted")
+        except (json.JSONDecodeError, OSError):
+            continue
+        if prov == "local":
+            raise SystemExit(
+                f"refusing to sign {date_str}: {p.name} has provenance "
+                f"'local'. Mock and locally-run results are never part of the "
+                f"published record. They belong in results-local/."
+            )
+
+
 def read_log() -> list[dict]:
     if not LOG.exists():
         return []
@@ -223,6 +243,7 @@ def read_log() -> list[dict]:
 
 
 def append_day(date_str: str, seed_hex: str) -> dict:
+    _refuse_local(date_str)
     entries = read_log()
     if any(e["date"] == date_str for e in entries):
         raise SystemExit(
@@ -260,7 +281,7 @@ def verify_chain(pub_hex: str | None = None) -> tuple[bool, list[str]]:
         if e["index"] != i:
             problems.append(f"{e['date']}: index {e['index']} out of order")
         if e["prev_head"] != prev:
-            problems.append(f"{e['date']}: chain break — prev_head does not match {prev[:12]}…")
+            problems.append(f"{e['date']}: chain break - prev_head does not match {prev[:12]}…")
 
         body = {k: e[k] for k in ("date", "files", "day_digest", "prev_head", "index")}
         head = hashlib.sha256(canonical(body).encode("utf-8")).hexdigest()
@@ -298,7 +319,7 @@ def main():
     if a.cmd == "keygen":
         seed = os.urandom(32).hex()
         pub = public_key(seed)
-        print("SEED (secret — put in a GitHub Actions secret, never commit):")
+        print("SEED (secret - put in a GitHub Actions secret, never commit):")
         print(f"  ALIASWATCH_SIGNING_SEED={seed}")
         print("PUBLIC KEY (commit this):")
         print(f"  {pub}")
@@ -318,7 +339,7 @@ def main():
     ok, problems = verify_chain()
     n = len(read_log())
     if ok:
-        print(f"chain OK — {n} days, unbroken and signed")
+        print(f"chain OK - {n} days, unbroken and signed")
     else:
         print(f"CHAIN PROBLEMS ({n} days):")
         for p in problems:

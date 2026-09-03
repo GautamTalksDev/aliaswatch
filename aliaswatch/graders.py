@@ -5,7 +5,7 @@ a GradeResult. Determinism is the whole product: the same stored response must
 grade identically forever, on any machine, at any future date.
 
 That property is what makes AliasWatch auditable. Yesterday's *model* cannot be
-re-run — the endpoint is gone. Yesterday's *grading* must be reproducible
+re-run - the endpoint is gone. Yesterday's *grading* must be reproducible
 exactly, over the archived raw outputs.
 """
 
@@ -68,7 +68,7 @@ def _letters_only(s: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 1 — ground_truth
+# FAMILY 1 - ground_truth
 # ---------------------------------------------------------------------------
 
 def grade_exact_numeric(item, text, tool_calls=None) -> GradeResult:
@@ -103,7 +103,7 @@ def grade_exact_text(item, text, tool_calls=None) -> GradeResult:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 2 — format_compliance
+# FAMILY 2 - format_compliance
 # ---------------------------------------------------------------------------
 
 def _validate_schema(obj: Any, schema: dict, path="$") -> str | None:
@@ -208,7 +208,7 @@ def grade_no_preamble(item, text, tool_calls=None) -> GradeResult:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 3 — constraint_adherence
+# FAMILY 3 - constraint_adherence
 # ---------------------------------------------------------------------------
 
 def grade_word_count(item, text, tool_calls=None) -> GradeResult:
@@ -266,11 +266,11 @@ def grade_forbidden_words(item, text, tool_calls=None) -> GradeResult:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 4 — refusal_rate
+# FAMILY 4 - refusal_rate
 #
 # The grader answers one question: did the model decline? Not whether the
 # answer was good. Published as an explicit phrase list so the measurement is
-# inspectable and arguable — the list itself is part of the sealed battery
+# inspectable and arguable - the list itself is part of the sealed battery
 # artifact and cannot be quietly tuned to make a provider look better or worse.
 # ---------------------------------------------------------------------------
 
@@ -310,7 +310,7 @@ def grade_refusal_detect(item, text, tool_calls=None) -> GradeResult:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 5 — tool_call
+# FAMILY 5 - tool_call
 # ---------------------------------------------------------------------------
 
 def _args_match(got: dict, want: dict) -> bool:
@@ -351,7 +351,7 @@ def grade_tool_selection(item, text, tool_calls=None) -> GradeResult:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 6 — verbosity
+# FAMILY 6 - verbosity
 #
 # Non-binary. Returns a length measurement; drift is a two-sample test against
 # the rolling baseline, handled in stats.py. There is no "correct" length, so
@@ -399,8 +399,8 @@ def grade(item: dict, text: str, tool_calls=None) -> GradeResult:
     """Dispatch.
 
     Guard: an empty response can never pass a binary grader. Several graders
-    are satisfied vacuously by the empty string — zero characters is under any
-    character limit and contains no forbidden word — so a model returning
+    are satisfied vacuously by the empty string - zero characters is under any
+    character limit and contains no forbidden word - so a model returning
     nothing would score as perfectly compliant. The guard lives here rather
     than in each grader so a grader added later cannot reintroduce it.
 

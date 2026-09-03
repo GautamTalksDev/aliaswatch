@@ -18,7 +18,7 @@ no database, no server-side code and no user input reaching a backend. That
 removes most of the usual attack surface by construction. What remains is worth
 naming precisely.
 
-### T1 — Falsifying the public record (the real threat)
+### T1 - Falsifying the public record (the real threat)
 
 The record's entire value is that it is believed. The highest-value attack is
 altering history: making a past day show a change that did not happen, or hiding
@@ -31,15 +31,15 @@ Mitigations:
 - The public key is committed to the repository; verification runs fully offline
   (`python3 -m aliaswatch.log verify`) and in the browser on `/verify.html`.
 - `results/` is append-only by policy; corrections are new entries, never edits.
-- Signed heads should be published externally — a signed git tag, a post, an
-  archive.org snapshot — so a fork of the chain is provable by any third party
+- Signed heads should be published externally - a signed git tag, a post, an
+  archive.org snapshot - so a fork of the chain is provable by any third party
   holding an older head. **A signature alone does not stop the key holder from
   re-signing a rewritten chain; external publication of heads is what closes
   that gap, and it is an operational duty, not a code feature.**
 - The battery is sealed with a SHA-256 the runner verifies before every run,
   so the questions cannot be quietly changed to alter the result.
 
-### T2 — Compromise of the signing key or CI
+### T2 - Compromise of the signing key or CI
 
 The signing seed lives only in a GitHub Actions secret. Consequences of theft:
 an attacker can sign a forged chain.
@@ -56,7 +56,7 @@ Mitigations:
 - Branch protection with required review on `main`, so a single compromised
   token cannot rewrite the record unobserved.
 
-### T3 — Supply-chain compromise
+### T3 - Supply-chain compromise
 
 Mitigations:
 - **Zero runtime third-party dependencies.** The harness is standard library
@@ -66,7 +66,7 @@ Mitigations:
 - Dependabot is enabled for GitHub Actions only, because that is the only
   dependency surface that exists.
 
-### T4 — Malicious content in model outputs
+### T4 - Malicious content in model outputs
 
 Archived model outputs are attacker-influenceable in principle: a provider (or a
 prompt-injection path) could return content designed to attack readers of the
@@ -78,13 +78,13 @@ Mitigations:
 - The CSP forbids inline script entirely (`script-src 'self'`, no
   `unsafe-inline`, no `unsafe-eval`), so injected markup cannot execute even if
   a rendering bug were introduced.
-- `data.json` contains only numbers, dates, family names and status strings —
+- `data.json` contains only numbers, dates, family names and status strings - 
   raw response text is never loaded into the page, only linked to on GitHub,
   which renders it as inert plain text.
 - Result files are written as JSON with standard escaping; no template
   interpolation of model text into HTML occurs at any point.
 
-### T5 — Provider-side manipulation of the measurement
+### T5 - Provider-side manipulation of the measurement
 
 A provider could in principle detect AliasWatch's traffic and serve it a
 stable configuration while other users get something else.
@@ -95,7 +95,7 @@ discoverable by third parties reproducing it), and independent reproduction is
 explicitly invited. This is an inherent limit of black-box measurement, not a
 bug to be closed.
 
-### T6 — Denial of service / cost exhaustion
+### T6 - Denial of service / cost exhaustion
 
 The site is static behind a CDN. The runner is the cost surface: a bug causing
 retry storms could burn the API budget.
@@ -114,27 +114,27 @@ compromise of a measured provider's infrastructure; nation-state adversaries.
 
 ## OWASP alignment
 
-Against the **OWASP Top 10 (2021)** — noting honestly that most categories are
+Against the **OWASP Top 10 (2021)** - noting honestly that most categories are
 inapplicable to a static site with no backend, rather than claiming defences
 that are not needed:
 
 | | Category | Status |
 |---|---|---|
-| A01 | Broken access control | N/A — no auth, no accounts, no protected resources. Everything published is intended to be public. |
+| A01 | Broken access control | N/A - no auth, no accounts, no protected resources. Everything published is intended to be public. |
 | A02 | Cryptographic failures | Ed25519 for log signing; SHA-256 for chaining and sealing. No secrets in transit or at rest on the site. HSTS with preload; `upgrade-insecure-requests`. No custom crypto except a standards-conformant RFC 8032 implementation, cross-validated in tests against `cryptography`. |
 | A03 | Injection | No SQL, no shell interpolation, no server-side templating of untrusted data. Front end uses `textContent` exclusively. CSP forbids inline and `eval`. |
 | A04 | Insecure design | Threat model above; the primary risk (record falsification) is addressed structurally by hash-chaining rather than by policy. |
 | A05 | Security misconfiguration | Full header set in `web/_headers` plus a meta CSP fallback; `nosniff`, `DENY` framing, COOP/COEP/CORP, a deny-by-default Permissions-Policy, no directory listing, no source maps published. |
 | A06 | Vulnerable components | No runtime dependencies. Dependabot on Actions. Actions pinned by SHA. |
-| A07 | Auth failures | N/A — no authentication exists. |
+| A07 | Auth failures | N/A - no authentication exists. |
 | A08 | Software/data integrity failures | The central control: sealed battery, hash-chained signed log, offline and in-browser verification, append-only policy, SHA-pinned CI. |
 | A09 | Logging & monitoring failures | CI failure opens a GitHub issue automatically; a failed day is recorded as a visible gap rather than silently skipped. No visitor logging by design. |
 | A10 | SSRF | The runner fetches only a fixed, hard-coded list of provider endpoints. No URL is ever taken from input, configuration or model output. |
 
 **OWASP ASVS v5 Level 1** is the target for the web surface. The applicable
-controls — V1 (encoding/injection: `textContent` only), V3 (session: none
+controls - V1 (encoding/injection: `textContent` only), V3 (session: none
 exists), V6 (crypto: standard primitives), V12 (secure comms: HSTS preload),
-V13 (config: full header set, no secrets client-side) — are met. Controls
+V13 (config: full header set, no secrets client-side) - are met. Controls
 concerning authentication, session management, access control and file upload
 are not applicable because none of those features exist.
 
@@ -152,7 +152,7 @@ Generate: `python3 -m aliaswatch.log keygen --write-pub`
 publish the final head signed under the old key, commit the new public key with
 the old one retained in `signing-key.pub.old`, and record the rotation date in
 `VERIFYING.md`. Verifiers must then check pre-rotation entries against the old
-key. Rotate immediately on any suspicion of compromise, and say so publicly —
+key. Rotate immediately on any suspicion of compromise, and say so publicly - 
 a silent rotation is indistinguishable from an attack.
 
 ---

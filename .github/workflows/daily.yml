@@ -47,7 +47,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python3 -m aliaswatch.runner
 
-      # The seed is passed by environment only — never on a command line, where
+      # The seed is passed by environment only - never on a command line, where
       # it would appear in process listings and job logs.
       - name: Sign and append the day
         env:
@@ -82,5 +82,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `daily run failed ${day}`,
-              body: `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nThis day will appear as a gap in the record unless re-run. Do not backfill it silently — a gap is honest, an invented day is not.`
+              body: `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nThis day will appear as a gap in the record unless re-run. Do not backfill it silently - a gap is honest, an invented day is not.`
             });

@@ -7,10 +7,10 @@ The harness and the website have no runtime third-party dependencies. The
 website ships no external scripts, stylesheets, fonts, analytics or trackers.
 
 Optional development/acceleration tools, not bundled and not required:
-  - cryptography (Apache-2.0 OR BSD-3-Clause) — optional Ed25519 acceleration.
+  - cryptography (Apache-2.0 OR BSD-3-Clause) - optional Ed25519 acceleration.
     A vendored pure-Python RFC 8032 implementation is used when it is absent,
     so no verification path depends on it.
-  - playwright (Apache-2.0) — development-only screenshot review.
+  - playwright (Apache-2.0) - development-only screenshot review.
 
 The Ed25519 fallback in aliaswatch/log.py is an original implementation of
 RFC 8032 written for this project.

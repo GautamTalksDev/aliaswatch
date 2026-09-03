@@ -1,7 +1,7 @@
 """Tests.
 
-Two jobs. First, the graders behave. Second — and this is the one that matters
-publicly — a Monte Carlo that measures AliasWatch's own false-alarm rate under the
+Two jobs. First, the graders behave. Second - and this is the one that matters
+publicly - a Monte Carlo that measures AliasWatch's own false-alarm rate under the
 null hypothesis of no change at all. That number goes on the methodology page
 *before* the first flag is published. A drift detector that has not measured
 its own false positives is an opinion.
@@ -287,6 +287,40 @@ check("signature rejects wrong key",
       not awlog.verify(awlog.public_key("33" * 32), b"head", _sig))
 check("canonical json is key-sorted and compact",
       awlog.canonical({"b": 1, "a": [2, 3]}) == '{"a":[2,3],"b":1}')
+
+# ---------------------------------------------------------------------------
+print("local / mock separation")
+
+from aliaswatch import local as awlocal, runner as awrunner  # noqa: E402
+
+check("mock providers are marked local",
+      all(s.provider in awrunner.LOCAL_PROVIDERS for s in awlocal.MOCK_MODELS))
+check("ollama providers are marked local",
+      all(s.provider in awrunner.LOCAL_PROVIDERS for s in awlocal.LOCAL_MODELS))
+check("hosted providers are not marked local",
+      not any(s.provider in awrunner.LOCAL_PROVIDERS for s in awrunner.MODELS))
+check("local results go to a separate directory",
+      awrunner.RESULTS_LOCAL != awrunner.RESULTS)
+
+# Every mock response must actually satisfy (or fail) the grader it targets,
+# or the fixture is testing nothing.
+_bat = awrunner.load_battery("v1")
+_spec = awlocal.MOCK_MODELS[0]
+_pass_ok = _fail_ok = 0
+for _it in _bat["items"]:
+    if _it["family"] == "verbosity":
+        continue
+    _t, _c = awlocal._passing_response(_it)
+    if graders.grade(_it, _t, _c).passed:
+        _pass_ok += 1
+    _t, _c = awlocal._failing_response(_it, random.Random(1))
+    if graders.grade(_it, _t, _c).passed is False:
+        _fail_ok += 1
+_n = len([i for i in _bat["items"] if i["family"] != "verbosity"])
+print(f"  mock passing responses graded pass: {_pass_ok}/{_n}")
+print(f"  mock failing responses graded fail: {_fail_ok}/{_n}")
+check("every mock 'pass' response passes its grader", _pass_ok == _n)
+check("every mock 'fail' response fails its grader", _fail_ok == _n)
 
 # ---------------------------------------------------------------------------
 print(f"\n{PASS} passed, {FAIL} failed")

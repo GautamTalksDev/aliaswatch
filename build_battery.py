@@ -2,7 +2,7 @@
 
 Run once to emit battery/v1.json. The emitted file is the artifact; this script
 exists so the construction is auditable, not so the battery can be edited in
-place. Editing a sealed battery is forbidden — publish v2 and dual-run for 14
+place. Editing a sealed battery is forbidden - publish v2 and dual-run for 14
 days (see METHODOLOGY.md).
 """
 
@@ -28,7 +28,7 @@ def add(family, item_id, prompt, grader, **kw):
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 1 — ground_truth (the control group)
+# FAMILY 1 - ground_truth (the control group)
 #
 # These should not move. If they move, something real happened. They exist to
 # calibrate the floor and to give every other family a reference point.
@@ -131,7 +131,7 @@ for iid, prompt, answer in GT_EXTRACT:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 2 — format_compliance
+# FAMILY 2 - format_compliance
 #
 # "Respond with only X." Catches instruction-following decay: the preamble
 # creeping back in, the fenced code block reappearing, the helpful sign-off.
@@ -244,23 +244,23 @@ for iid, prompt in FC_NOFENCE:
     add("format_compliance", iid, prompt, "no_fence")
 
 FC_NOPREAMBLE = [
-    ("fc-np-01", "Name one prime number greater than 100. Respond with only the number — no preamble, no closing offer of further help."),
-    ("fc-np-02", "Give the plural of 'axis'. Respond with only the word — no preamble, no closing offer of further help."),
-    ("fc-np-03", "Give the past tense of 'to shrive'. Respond with only the word — no preamble, no closing offer of further help."),
-    ("fc-np-04", "Give the two-letter ISO country code for Norway. Respond with only the code — no preamble, no closing offer of further help."),
-    ("fc-np-05", "Give the boiling point of water at sea level in Celsius. Respond with only the number — no preamble, no closing offer of further help."),
-    ("fc-np-06", "Name the author of 'Middlemarch'. Respond with only the name — no preamble, no closing offer of further help."),
-    ("fc-np-07", "Give the hexadecimal for decimal 255. Respond with only the value — no preamble, no closing offer of further help."),
-    ("fc-np-08", "Give the number of players on a netball team. Respond with only the number — no preamble, no closing offer of further help."),
-    ("fc-np-09", "Name the longest river in Asia. Respond with only the name — no preamble, no closing offer of further help."),
-    ("fc-np-10", "Give the atomic number of carbon. Respond with only the number — no preamble, no closing offer of further help."),
+    ("fc-np-01", "Name one prime number greater than 100. Respond with only the number - no preamble, no closing offer of further help."),
+    ("fc-np-02", "Give the plural of 'axis'. Respond with only the word - no preamble, no closing offer of further help."),
+    ("fc-np-03", "Give the past tense of 'to shrive'. Respond with only the word - no preamble, no closing offer of further help."),
+    ("fc-np-04", "Give the two-letter ISO country code for Norway. Respond with only the code - no preamble, no closing offer of further help."),
+    ("fc-np-05", "Give the boiling point of water at sea level in Celsius. Respond with only the number - no preamble, no closing offer of further help."),
+    ("fc-np-06", "Name the author of 'Middlemarch'. Respond with only the name - no preamble, no closing offer of further help."),
+    ("fc-np-07", "Give the hexadecimal for decimal 255. Respond with only the value - no preamble, no closing offer of further help."),
+    ("fc-np-08", "Give the number of players on a netball team. Respond with only the number - no preamble, no closing offer of further help."),
+    ("fc-np-09", "Name the longest river in Asia. Respond with only the name - no preamble, no closing offer of further help."),
+    ("fc-np-10", "Give the atomic number of carbon. Respond with only the number - no preamble, no closing offer of further help."),
 ]
 for iid, prompt in FC_NOPREAMBLE:
     add("format_compliance", iid, prompt, "no_preamble")
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 3 — constraint_adherence
+# FAMILY 3 - constraint_adherence
 #
 # Mechanically checkable constraints that are genuinely hard. These are the
 # most sensitive family: models fail them differently as they change, and the
@@ -329,7 +329,7 @@ for iid, prompt, forbidden in CA_NEG:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 4 — refusal_rate
+# FAMILY 4 - refusal_rate
 #
 # Benign prompts that sit near a policy boundary and are routinely
 # over-refused. The grader detects refusal, not correctness. A rising refusal
@@ -378,7 +378,7 @@ for iid, prompt in RF:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 5 — tool_call
+# FAMILY 5 - tool_call
 #
 # A fixed tool schema is supplied. Grader checks the model selected the right
 # tool with the right arguments. This is the axis coding-agent users feel
@@ -463,7 +463,7 @@ for iid, prompt in TC_NONE:
 # Harder selection cases: near-miss phrasing, distractor tools in scope,
 # arguments that must be inferred rather than copied.
 TC_HARD = [
-    ("tc-h01", "The customer in Oslo is asking whether their parcel left the depot — check the shipped list first.",
+    ("tc-h01", "The customer in Oslo is asking whether their parcel left the depot - check the shipped list first.",
      "search_orders", {"status": "shipped"}),
     ("tc-h02", "Put £12.50 back on SO-9981, they were overcharged for freight.",
      "refund_order", {"order_id": "SO-9981", "amount": 12.5}),
@@ -472,7 +472,7 @@ TC_HARD = [
     ("tc-h04", "How cold is it in Ulaanbaatar?", "get_weather", {"city": "Ulaanbaatar"}),
     ("tc-h05", "Anything still outstanding from the first of February onwards?",
      "search_orders", {"status": "open", "since": "2026-02-01"}),
-    ("tc-h06", "Order ORD-1002-C was never delivered — refund it.",
+    ("tc-h06", "Order ORD-1002-C was never delivered - refund it.",
      "refund_order", {"order_id": "ORD-1002-C"}),
     ("tc-h07", "Mail sam@vendor.example, subject 'Invoice query', asking which PO the 1,240 units were against.",
      "send_email", {"to": "sam@vendor.example", "subject": "Invoice query"}),
@@ -484,7 +484,7 @@ TC_HARD = [
     ("tc-h11", "Send jo@acme.io an email with subject 'Reschedule' saying Thursday works.",
      "send_email", {"to": "jo@acme.io", "subject": "Reschedule"}),
     ("tc-h12", "Is Quito warm today?", "get_weather", {"city": "Quito"}),
-    ("tc-h13", "Show me open orders — no date filter needed.",
+    ("tc-h13", "Show me open orders - no date filter needed.",
      "search_orders", {"status": "open"}),
     ("tc-h14", "Give the customer their money back on SO-4410, £99.99.",
      "refund_order", {"order_id": "SO-4410", "amount": 99.99}),
@@ -503,7 +503,7 @@ for iid, prompt in TC_NONE2:
 
 
 # ---------------------------------------------------------------------------
-# FAMILY 6 — verbosity
+# FAMILY 6 - verbosity
 #
 # Not pass/fail. A distribution. Verbosity creep is real, universally
 # complained about, and measured by nobody. Graded as a two-sample test

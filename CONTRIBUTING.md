@@ -23,7 +23,7 @@ battery yourself and tell us when your numbers disagree with ours.
 Any change to `graders.py` or `stats.py` must be accompanied by the re-measured
 false-alarm rate and detection lag from `tests/test_all.py`, and both numbers
 must be updated in `METHODOLOGY.md` in the same PR. If a change improves one at
-the cost of the other, say so explicitly in the PR description — that trade-off
+the cost of the other, say so explicitly in the PR description - that trade-off
 is the interesting part and it belongs in the public methodology, not in a
 commit message.
 

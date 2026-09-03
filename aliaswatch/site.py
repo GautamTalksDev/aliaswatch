@@ -2,8 +2,8 @@
 
 Copies the static shell from web/, then emits the data the front end reads:
 
-  data.json  — per-model day series with per-family detail
-  log.json   — the signed chain, for in-browser verification
+  data.json - per-model day series with per-family detail
+  log.json - the signed chain, for in-browser verification
 
 The renderer never invents a value. If there is no record, the site says so
 rather than showing an estimate. `--demo` writes synthetic data into a separate
@@ -40,17 +40,19 @@ def esc(s):
 # Day series
 # ---------------------------------------------------------------------------
 
-def build_models() -> list[dict]:
-    if not RESULTS.exists():
+def build_models(root: Path | None = None) -> list[dict]:
+    root = root or RESULTS
+    if not root.exists():
         return []
-    dates = sorted(d.name for d in RESULTS.iterdir() if d.is_dir())
+    dates = sorted(d.name for d in root.iterdir() if d.is_dir())
     raw: dict[str, list] = {}
     for ds in dates:
-        for f in sorted((RESULTS / ds).glob("*.summary.json")):
+        for f in sorted((root / ds).glob("*.summary.json")):
             s = json.loads(f.read_text())
             raw.setdefault(s["model"], []).append(s)
 
-    from .runner import MODELS
+    from .runner import all_models
+    MODELS = all_models()
     out = []
     for key, series in raw.items():
         history, flagged_dates, recent, days = [], set(), [], []
@@ -59,7 +61,7 @@ def build_models() -> list[dict]:
                 days.append({"date": s["date"], "status": "baselining",
                              "flagged": [], "z": 0.0, "incomplete": True,
                              "families": {},
-                             "note": "incomplete run — recorded as a gap, not data"})
+                             "note": "incomplete run - recorded as a gap, not data"})
                 continue
 
             today = {
@@ -163,6 +165,7 @@ SHELL = """<!doctype html>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css">
 </head><body>
 <a class="skip" href="#main">Skip to content</a>
@@ -170,7 +173,8 @@ SHELL = """<!doctype html>
 <div class="masthead">
   <a class="brand" href="./"><b>AliasWatch</b></a>
   <nav class="mastnav" aria-label="Primary">
-    <a href="index.html">Record</a>
+    <a href="./">Home</a>
+    <a href="record.html">Record</a>
     <a href="methodology.html">Methodology</a>
     <a href="verify.html">Verify</a>
     <a href="legal.html">Legal</a>
@@ -181,7 +185,7 @@ SHELL = """<!doctype html>
 </main>
 <footer>
 <nav aria-label="Footer">
-  <a href="index.html">Record</a><a href="methodology.html">Methodology</a>
+  <a href="./">Home</a><a href="record.html">Record</a><a href="methodology.html">Methodology</a>
   <a href="verify.html">Verify</a><a href="legal.html">Legal &amp; attribution</a>
   <a href="privacy.html">Privacy</a>
 </nav>
@@ -275,7 +279,7 @@ to be reassuring.
 
 ## Check the chain in your browser
 
-The [record page](index.html) recomputes every day's hash and every link
+The [record page](record.html) recomputes every day's hash and every link
 between days, locally. Nothing is sent anywhere. If you saved a head hash from
 this site weeks ago, paste it in: if it is not in today's chain, the record has
 been rewritten and you can prove it.
@@ -283,7 +287,7 @@ been rewritten and you can prove it.
 ## Check the signatures offline
 
 ```
-git clone https://github.com/GautamTalksDev/aliaswatch
+git clone https://github.com/aliaswatch/aliaswatch
 cd aliaswatch
 python3 -m aliaswatch.log verify
 ```
@@ -307,7 +311,7 @@ fails if it has regressed.
 
 ## Reproduce a fresh day
 
-You cannot re-run yesterday's model — that endpoint is gone, and no honest
+You cannot re-run yesterday's model - that endpoint is gone, and no honest
 project will tell you otherwise. What you can do is run the same sealed battery
 against the same alias today and compare:
 
@@ -323,7 +327,7 @@ asking exactly the same questions.
 
 A chain break means a past day's files no longer hash to what was signed. That
 is either an accident or an alteration. Either way it should be reported
-publicly as an issue — including when the operator is the one who caused it. A
+publicly as an issue - including when the operator is the one who caused it. A
 project that asks to be trusted has to make its own misbehaviour detectable by
 strangers, or the request is empty.
 """
@@ -345,8 +349,8 @@ The one piece of browser storage is your colour-theme preference, kept in
 `localStorage` under the key `aw-theme`. It never leaves your device. Clearing
 site data removes it.
 
-The static host serving this site may keep standard request logs — IP address,
-user agent, requested path — for operational and abuse-prevention purposes, as
+The static host serving this site may keep standard request logs - IP address,
+user agent, requested path - for operational and abuse-prevention purposes, as
 any web server does. AliasWatch does not query, export, analyse or retain those
 logs, and they are not linked to any identity.
 
@@ -360,6 +364,36 @@ will be added if the tooling requires one.
 """
 
 
+def render_feed(models) -> str:
+    """RSS of confirmed changes and daily runs. Only confirmed 'changed' days
+    and unconfirmed 'watch' days are items - a feed that fires every day on
+    'stable' is noise nobody subscribes to."""
+    items = []
+    for m in models:
+        for d in m["days"]:
+            if d["status"] not in ("changed", "watch"):
+                continue
+            fams = ", ".join(x.replace("_", " ") for x in d.get("flagged", [])) or " - "
+            title = (f"{m['label']}: changed on {d['date']}" if d["status"] == "changed"
+                     else f"{m['label']}: excursion on {d['date']} (unconfirmed)")
+            desc = (f"Families beyond the noise floor: {fams}. "
+                    f"AliasWatch measures the public API alias, not the weights, and "
+                    f"does not assert why a measurement moved.")
+            items.append((d["date"], title, desc, m["key"]))
+    items.sort(reverse=True)
+    body = "".join(
+        f"<item><title>{esc(t)}</title>"
+        f"<link>https://aliaswatch.dev/record.html#mh-{esc(k)}</link>"
+        f"<guid isPermaLink=\"false\">aliaswatch:{esc(k)}:{esc(dt)}</guid>"
+        f"<pubDate>{esc(dt)}</pubDate><description>{esc(ds)}</description></item>"
+        for dt, t, ds, k in items[:50])
+    return ('<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+            '<title>AliasWatch - confirmed model changes</title>'
+            '<link>https://aliaswatch.dev/</link>'
+            '<description>A signed public record of when major AI model aliases change.</description>'
+            f'{body}</channel></rss>')
+
+
 def render_prose(title, md):
     return SHELL.format(title=esc(title), desc=esc(title), body=md_to_html(md))
 
@@ -368,14 +402,18 @@ def render_prose(title, md):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--demo", action="store_true")
+    ap.add_argument("--demo", action="store_true",
+                    help="synthetic data, for exercising the interface")
+    ap.add_argument("--local", action="store_true",
+                    help="build from results-local/ (mock or Ollama runs)")
     a = ap.parse_args()
 
-    out = DIST / "demo" if a.demo else DIST
+    out = DIST / "demo" if a.demo else (DIST / "local" if a.local else DIST)
     out.mkdir(parents=True, exist_ok=True)
 
-    for f in ("index.html", "styles.css", "app.js", "robots.txt",
-              "sitemap.xml", "_headers"):
+    for f in ("index.html", "record.html", "styles.css", "app.js",
+              "landing.css", "landing.js", "robots.txt", "sitemap.xml", "_headers",
+              "favicon.svg", "icon.svg", "logo.svg"):
         src = WEB / f
         if src.exists():
             shutil.copy2(src, out / f)
@@ -383,15 +421,30 @@ def main():
     if wk.exists():
         shutil.copytree(wk, out / ".well-known", dirs_exist_ok=True)
 
+    banner = ""
     if a.demo:
-        p = out / "index.html"
-        p.write_text(p.read_text().replace(
-            '<a class="skip" href="#main">',
-            '<div class="banner"><b>Demo data.</b> These numbers are synthetic, '
-            'generated to exercise the interface. They are not a record of any '
-            "model's behaviour.</div>\n<a class=\"skip\" href=\"#main\">", 1))
+        banner = ('<div class="banner"><b>Demo data.</b> These numbers are '
+                  'synthetic, generated to exercise the interface. They are not '
+                  "a record of any model's behaviour.</div>")
+    elif a.local:
+        banner = ('<div class="banner"><b>Local build.</b> These numbers come '
+                  'from mock or locally-run models on this machine. They are '
+                  'not a measurement of any hosted model and are never part of '
+                  'the published record.</div>')
+    if banner:
+        for name in ("index.html", "record.html"):
+            p = out / name
+            p.write_text(p.read_text().replace(
+                '<a class="skip" href="#main">',
+                banner + '\n<a class="skip" href="#main">', 1))
 
-    models = make_demo() if a.demo else build_models()
+    from .runner import RESULTS_LOCAL
+    if a.demo:
+        models = make_demo()
+    elif a.local:
+        models = build_models(RESULTS_LOCAL)
+    else:
+        models = build_models()
 
     try:
         seal = json.loads((ROOT / "battery" / "v1.json").read_text())["sha256"]
@@ -403,7 +456,7 @@ def main():
     (out / "data.json").write_text(json.dumps({
         "generated": last_run, "last_run": last_run,
         "battery_version": "v1", "battery_sha256": seal,
-        "repo": REPO, "demo": bool(a.demo), "models": models,
+        "repo": REPO, "demo": bool(a.demo or a.local), "models": models,
     }, indent=1))
 
     log_path = RESULTS / "log.jsonl"
@@ -415,18 +468,20 @@ def main():
     meth = ROOT / "METHODOLOGY.md"
     legal = ROOT / "legal" / "LEGAL.md"
     (out / "methodology.html").write_text(render_prose(
-        "AliasWatch — methodology",
+        "AliasWatch - methodology",
         meth.read_text() if meth.exists() else "# Methodology\n\nNot yet written."))
     (out / "verify.html").write_text(render_prose(
-        "AliasWatch — verify the record", VERIFY_MD))
+        "AliasWatch - verify the record", VERIFY_MD))
     (out / "privacy.html").write_text(render_prose(
-        "AliasWatch — privacy", PRIVACY_MD))
+        "AliasWatch - privacy", PRIVACY_MD))
     (out / "legal.html").write_text(render_prose(
-        "AliasWatch — legal and attribution",
+        "AliasWatch - legal and attribution",
         legal.read_text() if legal.exists() else "# Legal\n\nNot yet written."))
 
+    (out / "feed.xml").write_text(render_feed(models))
+
     n = sum(len(m["days"]) for m in models)
-    print(f"built {out} — {len(models)} models, {n} model-days, "
+    print(f"built {out} - {len(models)} models, {n} model-days, "
           f"{len(entries)} signed log entries")
     if not models:
         print("  (no record yet: the site renders an explicit empty state, "
